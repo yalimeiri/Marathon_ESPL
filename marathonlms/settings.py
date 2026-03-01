@@ -136,11 +136,10 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-# ── Static files (WhiteNoise) ───────────────────────────────────────────────
+# ── Static files (WhiteNoise serves via middleware — no special storage needed) ─
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 # ── Media files ─────────────────────────────────────────────────────────────
 #
@@ -185,16 +184,15 @@ if USE_CLOUDINARY:
         api_secret=config("CLOUDINARY_API_SECRET"),
         secure=True,
     )
-    # cloudinary_storage must appear before django.contrib.staticfiles
-    _apps = [a for a in INSTALLED_APPS if a != "django.contrib.staticfiles"]
-    INSTALLED_APPS = ["cloudinary_storage"] + _apps + ["django.contrib.staticfiles", "cloudinary"]
-    # Django 5.x: use STORAGES dict (DEFAULT_FILE_STORAGE is deprecated)
+    INSTALLED_APPS += ["cloudinary_storage", "cloudinary"]
+    # Only route MEDIA (FileField uploads) to Cloudinary.
+    # Static files stay on local filesystem served by WhiteNoise middleware.
     STORAGES = {
         "default": {
             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
         },
         "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
 
