@@ -185,8 +185,19 @@ if USE_CLOUDINARY:
         api_secret=config("CLOUDINARY_API_SECRET"),
         secure=True,
     )
-    INSTALLED_APPS += ["cloudinary_storage", "cloudinary"]
-    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+    # cloudinary_storage must appear before django.contrib.staticfiles
+    _apps = [a for a in INSTALLED_APPS if a != "django.contrib.staticfiles"]
+    INSTALLED_APPS = ["cloudinary_storage"] + _apps + ["django.contrib.staticfiles", "cloudinary"]
+    # Django 5.x: use STORAGES dict (DEFAULT_FILE_STORAGE is deprecated)
+    STORAGES = {
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
 
 # ── Device Lock ─────────────────────────────────────────────────────────────
 DEVICE_COOKIE_NAME = "device_token"
