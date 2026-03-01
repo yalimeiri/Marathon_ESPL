@@ -173,25 +173,20 @@ MEDIA_ROOT = BASE_DIR / "media"
 #         },
 #     }
 #
-#  ── Cloudinary (alternative, uncomment to activate) ────────────────────────
 #
-# USE_CLOUDINARY = config("USE_CLOUDINARY", default=False, cast=bool)
-# if USE_CLOUDINARY:
-#     import cloudinary
-#     cloudinary.config(
-#         cloud_name = config("CLOUDINARY_CLOUD_NAME"),
-#         api_key    = config("CLOUDINARY_API_KEY"),
-#         api_secret = config("CLOUDINARY_API_SECRET"),
-#         secure     = True,
-#     )
-#     STORAGES = {
-#         "default": {
-#             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-#         },
-#         "staticfiles": {
-#             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-#         },
-#     }
+#  ── Cloudinary (activate by setting CLOUDINARY_URL in Railway Variables) ────
+#
+USE_CLOUDINARY = config("USE_CLOUDINARY", default=False, cast=bool)
+if USE_CLOUDINARY:
+    import cloudinary
+    cloudinary.config(
+        cloud_name=config("CLOUDINARY_CLOUD_NAME"),
+        api_key=config("CLOUDINARY_API_KEY"),
+        api_secret=config("CLOUDINARY_API_SECRET"),
+        secure=True,
+    )
+    INSTALLED_APPS += ["cloudinary_storage", "cloudinary"]
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 # ── Device Lock ─────────────────────────────────────────────────────────────
 DEVICE_COOKIE_NAME = "device_token"

@@ -1,1 +1,1 @@
-web: python manage.py migrate --no-input && python manage.py collectstatic --no-input && gunicorn marathonlms.wsgi --log-file -
+web: python manage.py migrate --no-input && python manage.py createsuperuser --no-input ; python manage.py collectstatic --no-input && gunicorn marathonlms.wsgi --timeout 300 --workers 2 --log-file -
