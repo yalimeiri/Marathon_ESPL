@@ -22,6 +22,25 @@ SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-before-prod
 DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
 
+# Auto-add Railway domain if running on Railway
+_RAILWAY_DOMAIN = os.environ.get("RAILWAY_STATIC_URL", "")
+if _RAILWAY_DOMAIN and _RAILWAY_DOMAIN not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_RAILWAY_DOMAIN)
+
+# Also add the public Railway URL
+_RAILWAY_PUBLIC = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
+if _RAILWAY_PUBLIC and _RAILWAY_PUBLIC not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_RAILWAY_PUBLIC)
+
+# CSRF trusted origins (required for admin forms in production)
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{h}" for h in ALLOWED_HOSTS if h not in ("*", "127.0.0.1", "localhost")
+]
+CSRF_TRUSTED_ORIGINS += config(
+    "CSRF_TRUSTED_ORIGINS", default="", cast=Csv()
+)
+
+
 # ── Application definition ──────────────────────────────────────────────────
 INSTALLED_APPS = [
     # Django built-ins
@@ -229,8 +248,12 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000          # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SECURE_SSL_REDIRECT = True
+    # Railway (and most PaaS) terminate SSL at the load balancer.
+    # Django must NOT redirect to HTTPS itself — use the proxy header instead.
+    SECURE_SSL_REDIRECT = False
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+
