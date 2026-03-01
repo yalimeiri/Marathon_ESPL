@@ -3,6 +3,7 @@ django>=5.0,<6.0
 
 # Database
 psycopg2-binary>=2.9
+dj-database-url>=2.1     # Robust DATABASE_URL parser (handles all PaaS formats)
 
 # WSGI Server (production)
 gunicorn>=21.2

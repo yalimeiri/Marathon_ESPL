@@ -91,30 +91,21 @@ TEMPLATES = [
 WSGI_APPLICATION = "marathonlms.wsgi.application"
 
 # ── Database ────────────────────────────────────────────────────────────────
+import dj_database_url
+
 _DATABASE_URL = config("DATABASE_URL", default="")
 
 if _DATABASE_URL:
-    # Production: PostgreSQL via DATABASE_URL
-    # Format: postgres://USER:PASSWORD@HOST:PORT/DBNAME
-    import re
-
-    _m = re.match(
-        r"postgres(?:ql)?://([^:]+):([^@]+)@([^:/]+):?(\d+)?/(.+)",
-        _DATABASE_URL,
-    )
-    if _m:
-        DATABASES = {
-            "default": {
-                "ENGINE": "django.db.backends.postgresql",
-                "NAME": _m.group(5),
-                "USER": _m.group(1),
-                "PASSWORD": _m.group(2),
-                "HOST": _m.group(3),
-                "PORT": _m.group(4) or "5432",
-            }
-        }
-    else:
-        raise ValueError(f"DATABASE_URL has an unexpected format: {_DATABASE_URL}")
+    # Production: parse any standard PostgreSQL URL format
+    # (Railway, Heroku, Render all use slightly different prefixes —
+    #  dj-database-url handles them all)
+    DATABASES = {
+        "default": dj_database_url.parse(
+            _DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
 else:
     # Local development: SQLite
     DATABASES = {
@@ -123,6 +114,7 @@ else:
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
+
 
 # ── Authentication ──────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "accounts.CustomUser"
