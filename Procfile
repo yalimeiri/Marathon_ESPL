@@ -1,2 +1,1 @@
-web: gunicorn marathonlms.wsgi --log-file -
-release: python manage.py migrate --no-input
+web: python manage.py migrate --no-input && python manage.py collectstatic --no-input && gunicorn marathonlms.wsgi --log-file -
