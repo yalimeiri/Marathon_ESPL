@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ video.title }} — MarathonLMS{% endblock %}
+{% block content %}
+<div style="margin-bottom:24px;">
+    {% if video.category %}
+    <a href="{% url 'courses:video-list' video.category.pk %}" style="color:#6366f1;text-decoration:none;">
+        ← Back to {{ video.category.name }}
+    </a>
+    {% else %}
+    <a href="{% url 'courses:category-list' %}" style="color:#6366f1;text-decoration:none;">← All Courses</a>
+    {% endif %}
+</div>
+
+<h1 style="font-size:1.8rem;color:#c7d2fe;margin-bottom:20px;">{{ video.title }}</h1>
+
+{% if video.file %}
+<div style="background:#000;border-radius:12px;overflow:hidden;margin-bottom:24px;max-width:900px;">
+    <video controls style="width:100%;display:block;max-height:540px;" preload="metadata">
+        <source src="{{ video.file.url }}" type="video/mp4">
+        <source src="{{ video.file.url }}" type="video/webm">
+        Your browser does not support the video tag.
+    </video>
+</div>
+{% else %}
+<p style="color:#f87171;margin-bottom:24px;">⚠️ No video file attached to this lesson.</p>
+{% endif %}
+
+{% if video.description %}
+<div style="background:#1a1d27;border-left:3px solid #6366f1;padding:16px 20px;border-radius:8px;color:#94a3b8;">
+    {{ video.description|linebreaks }}
+</div>
+{% endif %}
+
+{% if not video.is_published and request.user.is_staff %}
+<p
+    style="margin-top:16px;padding:10px 16px;background:#2a1a1a;border-left:3px solid #f87171;border-radius:6px;color:#f87171;font-size:.875rem;">
+    🔒 This video is <strong>unpublished</strong> and visible to staff only.
+</p>
+{% endif %}
+{% endblock %}

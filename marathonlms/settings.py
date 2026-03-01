@@ -1,0 +1,236 @@
+"""
+MarathonLMS — settings.py
+───────────────────────────────────────────────────────────────────────────────
+Reads secrets & configuration from environment variables (or a .env file)
+via python-decouple so no credentials ever live in source control.
+
+Local Dev  → SQLite, DEBUG=True, local media storage
+Production → PostgreSQL (DATABASE_URL), DEBUG=False,
+             WhiteNoise for static, optionally S3 for media.
+"""
+
+import os
+from pathlib import Path
+
+from decouple import Csv, config, UndefinedValueError
+
+# ── Base directory ──────────────────────────────────────────────────────────
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# ── Security ────────────────────────────────────────────────────────────────
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-before-production")
+DEBUG = config("DEBUG", default=True, cast=bool)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
+
+# ── Application definition ──────────────────────────────────────────────────
+INSTALLED_APPS = [
+    # Django built-ins
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "whitenoise.runserver_nostatic",  # serves static in dev too (optional)
+    "django.contrib.staticfiles",
+    # Third-party
+    "storages",
+    # Project apps
+    "accounts.apps.AccountsConfig",
+    "courses.apps.CoursesConfig",
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # ← must be just after SecurityMiddleware
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "middleware.single_device.SingleDeviceLoginMiddleware",  # ← device-lock
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+ROOT_URLCONF = "marathonlms.urls"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = "marathonlms.wsgi.application"
+
+# ── Database ────────────────────────────────────────────────────────────────
+_DATABASE_URL = config("DATABASE_URL", default="")
+
+if _DATABASE_URL:
+    # Production: PostgreSQL via DATABASE_URL
+    # Format: postgres://USER:PASSWORD@HOST:PORT/DBNAME
+    import re
+
+    _m = re.match(
+        r"postgres(?:ql)?://([^:]+):([^@]+)@([^:/]+):?(\d+)?/(.+)",
+        _DATABASE_URL,
+    )
+    if _m:
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": _m.group(5),
+                "USER": _m.group(1),
+                "PASSWORD": _m.group(2),
+                "HOST": _m.group(3),
+                "PORT": _m.group(4) or "5432",
+            }
+        }
+    else:
+        raise ValueError(f"DATABASE_URL has an unexpected format: {_DATABASE_URL}")
+else:
+    # Local development: SQLite
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
+# ── Authentication ──────────────────────────────────────────────────────────
+AUTH_USER_MODEL = "accounts.CustomUser"
+
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/courses/"
+LOGOUT_REDIRECT_URL = "/accounts/login/"
+
+# ── Internationalisation ────────────────────────────────────────────────────
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
+USE_I18N = True
+USE_TZ = True
+
+# ── Static files (WhiteNoise) ───────────────────────────────────────────────
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# ── Media files ─────────────────────────────────────────────────────────────
+#
+#  LOCAL development (default)
+#  ─────────────────────────────
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+#
+#  ── S3 / DigitalOcean Spaces (uncomment to activate) ───────────────────────
+#  Set USE_S3=True in .env and fill the S3_* variables.
+#
+# USE_S3 = config("USE_S3", default=False, cast=bool)
+# if USE_S3:
+#     AWS_ACCESS_KEY_ID       = config("AWS_ACCESS_KEY_ID")
+#     AWS_SECRET_ACCESS_KEY   = config("AWS_SECRET_ACCESS_KEY")
+#     AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
+#     AWS_S3_REGION_NAME      = config("AWS_S3_REGION_NAME", default="us-east-1")
+#     AWS_S3_CUSTOM_DOMAIN    = config("AWS_S3_CUSTOM_DOMAIN", default=None)
+#     AWS_DEFAULT_ACL         = "private"
+#     AWS_S3_FILE_OVERWRITE   = False
+#     AWS_QUERYSTRING_AUTH    = True   # pre-signed URLs for private videos
+#
+#     STORAGES = {
+#         "default": {
+#             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+#         },
+#         "staticfiles": {
+#             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+#         },
+#     }
+#
+#  ── Cloudinary (alternative, uncomment to activate) ────────────────────────
+#
+# USE_CLOUDINARY = config("USE_CLOUDINARY", default=False, cast=bool)
+# if USE_CLOUDINARY:
+#     import cloudinary
+#     cloudinary.config(
+#         cloud_name = config("CLOUDINARY_CLOUD_NAME"),
+#         api_key    = config("CLOUDINARY_API_KEY"),
+#         api_secret = config("CLOUDINARY_API_SECRET"),
+#         secure     = True,
+#     )
+#     STORAGES = {
+#         "default": {
+#             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+#         },
+#         "staticfiles": {
+#             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+#         },
+#     }
+
+# ── Device Lock ─────────────────────────────────────────────────────────────
+DEVICE_COOKIE_NAME = "device_token"
+# Signed cookies expire after 30 days (seconds)
+DEVICE_COOKIE_AGE = 60 * 60 * 24 * 30
+
+# ── Default primary-key type ─────────────────────────────────────────────────
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO" if DEBUG else "WARNING",
+            "propagate": False,
+        },
+        "middleware.single_device": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
+# ── Production-hardening (only apply when not in DEBUG) ──────────────────────
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000          # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True

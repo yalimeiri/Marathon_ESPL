@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name }} — MarathonLMS{% endblock %}
+{% block content %}
+<div style="margin-bottom:24px;">
+    <a href="{% url 'courses:category-list' %}" style="color:#6366f1;text-decoration:none;">← All Courses</a>
+</div>
+<h1 style="font-size:1.8rem;color:#c7d2fe;margin-bottom:4px;">{{ category.name }}</h1>
+<p style="color:#64748b;margin-bottom:32px;">{{ category.description }}</p>
+
+{% if videos %}
+<div style="display:flex;flex-direction:column;gap:12px;">
+    {% for video in videos %}
+    <a href="{% url 'courses:video-detail' video.pk %}"
+        style="display:flex;align-items:center;gap:16px;background:#1a1d27;border:1px solid #2d2f3e;border-radius:10px;padding:16px 20px;text-decoration:none;transition:border-color .2s;"
+        onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#2d2f3e'">
+        <span style="font-size:1.5rem;">▶️</span>
+        <div>
+            <div style="color:#e8e8e8;font-weight:600;">{{ video.title }}</div>
+            {% if video.description %}
+            <div style="color:#64748b;font-size:.85rem;margin-top:2px;">{{ video.description|truncatewords:15 }}</div>
+            {% endif %}
+        </div>
+        <span style="margin-left:auto;color:#6366f1;font-size:.85rem;">#{{ video.order }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<p style="color:#64748b;">No published videos in this category yet.</p>
+{% endif %}
+{% endblock %}

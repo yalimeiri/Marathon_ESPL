@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MarathonLMS{% endblock %}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e8e8e8; min-height: 100vh; }
+        nav { background: #1a1d27; padding: 14px 32px; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid #2d2f3e; }
+        nav a { color: #7c8cf8; text-decoration: none; font-weight: 500; }
+        nav a:hover { color: #a5b4fc; }
+        .nav-brand { font-size: 1.2rem; font-weight: 700; color: #c7d2fe; margin-right: auto; }
+        main { max-width: 1100px; margin: 40px auto; padding: 0 24px; }
+        .messages { margin-bottom: 20px; }
+        .messages li { list-style: none; padding: 10px 16px; border-radius: 6px; margin-bottom: 8px; background: #2a2f4a; border-left: 3px solid #7c8cf8; }
+        .btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; border: none; }
+        .btn-primary { background: #6366f1; color: #fff; }
+        .btn-primary:hover { background: #4f46e5; }
+    </style>
+</head>
+<body>
+    <nav>
+        <span class="nav-brand">🎓 MarathonLMS</span>
+        {% if user.is_authenticated %}
+            <a href="{% url 'courses:category-list' %}">Courses</a>
+            {% if user.is_staff %}
+                <a href="{% url 'admin:index' %}">Admin</a>
+            {% endif %}
+            <a href="{% url 'logout' %}">Logout ({{ user.username }})</a>
+        {% else %}
+            <a href="{% url 'login' %}">Login</a>
+        {% endif %}
+    </nav>
+    <main>
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
