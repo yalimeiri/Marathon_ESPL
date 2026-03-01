@@ -13,11 +13,14 @@
 
 <h1 style="font-size:1.8rem;color:#c7d2fe;margin-bottom:20px;">{{ video.title }}</h1>
 
-{% if video.file %}
+{% if video.cloudinary_url or video.file %}
 <div style="background:#000;border-radius:12px;overflow:hidden;margin-bottom:24px;max-width:900px;">
     <video controls style="width:100%;display:block;max-height:540px;" preload="metadata">
+        {% if video.cloudinary_url %}
+        <source src="{{ video.cloudinary_url }}" type="video/mp4">
+        {% elif video.file %}
         <source src="{{ video.file.url }}" type="video/mp4">
-        <source src="{{ video.file.url }}" type="video/webm">
+        {% endif %}
         Your browser does not support the video tag.
     </video>
 </div>

@@ -57,7 +57,15 @@ class Video(models.Model):
     file = models.FileField(
         upload_to=video_upload_path,
         verbose_name="Video File",
-        help_text="Upload an MP4 / MOV / WEBM file. Large files are supported.",
+        help_text="Upload a small MP4 file (under 10MB), OR paste a Cloudinary URL below.",
+        blank=True,
+        null=True,
+    )
+    cloudinary_url = models.URLField(
+        blank=True,
+        verbose_name="Cloudinary URL",
+        help_text="Paste the direct Cloudinary video URL here (for large files). "
+                  "Upload the video at cloudinary.com → Media Library → copy URL.",
     )
     category = models.ForeignKey(
         Category,
