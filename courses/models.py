@@ -57,15 +57,21 @@ class Video(models.Model):
     file = models.FileField(
         upload_to=video_upload_path,
         verbose_name="Video File",
-        help_text="Upload a small MP4 file (under 10MB), OR paste a Cloudinary URL below.",
+        help_text="Upload a small MP4 file (under 10MB), OR use the Cloudinary URL field.",
         blank=True,
         null=True,
     )
     cloudinary_url = models.URLField(
+        max_length=500,
         blank=True,
         verbose_name="Cloudinary URL",
-        help_text="Paste the direct Cloudinary video URL here (for large files). "
-                  "Upload the video at cloudinary.com → Media Library → copy URL.",
+        help_text="Populated automatically by the Upload Manager, or paste manually.",
+    )
+    public_id = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Cloudinary Public ID",
+        help_text="Set automatically by the Upload Manager.",
     )
     category = models.ForeignKey(
         Category,

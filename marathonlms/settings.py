@@ -175,11 +175,12 @@ MEDIA_ROOT = BASE_DIR / "media"
 #
 #  ── Cloudinary (activate by setting CLOUDINARY_URL in Railway Variables) ────
 #
+CLOUDINARY_CLOUD_NAME = config("CLOUDINARY_CLOUD_NAME", default="")
 USE_CLOUDINARY = config("USE_CLOUDINARY", default=False, cast=bool)
 if USE_CLOUDINARY:
     import cloudinary
     cloudinary.config(
-        cloud_name=config("CLOUDINARY_CLOUD_NAME"),
+        cloud_name=CLOUDINARY_CLOUD_NAME,
         api_key=config("CLOUDINARY_API_KEY"),
         api_secret=config("CLOUDINARY_API_SECRET"),
         secure=True,

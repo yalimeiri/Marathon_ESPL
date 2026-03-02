@@ -16,4 +16,8 @@ urlpatterns = [
 
     # Individual video detail → /courses/video/<pk>/
     path("video/<int:pk>/", views.VideoDetailView.as_view(), name="video-detail"),
+
+    # ── Upload Manager (superuser only) ────────────────────────────────────
+    path("manager/upload/", views.upload_video_page, name="upload-video"),
+    path("manager/save-video/", views.save_video, name="save-video"),
 ]
