@@ -69,7 +69,7 @@ class VideoAdmin(admin.ModelAdmin):
             "fields": ("title", "category", "order", "is_published"),
         }),
         ("Content", {
-            "fields": ("file", "description"),
+            "fields": ("file", "cloudinary_url", "public_id", "description"),
         }),
         ("Timestamps", {
             "classes": ("collapse",),
