@@ -272,7 +272,8 @@
                 document.getElementById("upload-btn").textContent = "✅ Uploaded — change video";
             }
             if (error) {
-                alert("Upload error: " + error.message);
+                console.error("Cloudinary error full:", error);
+                alert("Upload error details:\n" + JSON.stringify(error, null, 2));
             }
         }
     );
