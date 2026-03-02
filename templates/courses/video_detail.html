@@ -38,6 +38,7 @@
     {# ── Google Drive /preview embed — free, no size limit ───────────── #}
     <iframe src="{{ url }}" style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen>
     </iframe>
+    {% elif url %}
     {# ── Cloudinary / direct MP4 ──────────────────────────────────── #}
     <video controls style="width:100%;height:100%;display:block;" preload="metadata">
         <source src="{{ url }}" type="video/mp4">
