@@ -231,7 +231,7 @@
     var widget = cloudinary.createUploadWidget(
         {
             cloudName: "{{ cloudinary_cloud_name }}",
-            uploadPreset: "ml_default",   // free unsigned preset on Cloudinary
+            uploadPreset: "marathon_unsigned",   // unsigned preset — create in Cloudinary settings
             resourceType: "video",
             maxFileSize: 1073741824,       // 1 GB limit
             clientAllowedFormats: ["mp4", "mov", "webm", "mkv", "avi"],
