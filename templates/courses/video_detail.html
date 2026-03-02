@@ -28,6 +28,12 @@
         style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
     </iframe>
+    {% elif "youtu.be/" in url %}
+    {# ── youtu.be short URL — extract 11-char ID from pos 17 ────────── #}
+    <iframe src="https://www.youtube.com/embed/{{ url|slice:'17:28' }}"
+        style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+    </iframe>
     {% elif url %}
     {# ── Cloudinary / direct MP4 ──────────────────────────────────── #}
     <video controls style="width:100%;height:100%;display:block;" preload="metadata">
