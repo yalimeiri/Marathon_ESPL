@@ -282,6 +282,20 @@
                     videoZoomWrapper.style.transition = "transform 0.2s ease-out";
                 }
             });
+
+            // Wheel / Trackpad Zooming inside video
+            dragOverlay.addEventListener("wheel", (e) => {
+                e.preventDefault(); // Prevent page scrolling
+
+                const zoomSpeed = 0.1;
+                // e.deltaY > 0 is scrolling down (zoom out), e.deltaY < 0 is scrolling up (zoom in)
+                if (e.deltaY < 0) {
+                    currentScale = Math.min(currentScale + zoomSpeed, 4);
+                } else {
+                    currentScale = Math.max(currentScale - zoomSpeed, 1);
+                }
+                updateTransform();
+            }, { passive: false });
         }
     });
 </script>
