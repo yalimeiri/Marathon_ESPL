@@ -1,28 +1,65 @@
-# סיכום פיתוח - תשתית סרטונים (MarathonLMS)
+# MarathonLMS Architecture & Context Guide
 
-מסמך זה מרכז את הפתרונות, ההגדרות והמגבלות הקשורות למערכת העלאת והצגת הסרטונים בפרויקט מרתון LMS, כפי שפותחו עד כה.
+This document is designed to provide future LLMs with the complete, up-to-date context of the MarathonLMS Django application. It summarizes all critical architectural decisions, security features, deployment quirks, and data flows.
 
-## 1. אחסון והעלאת סרטונים (Cloudinary)
-- **המטרה:** עקיפת מגבלות העלאה של השרת (Railway/Heroku) על ידי העלאה ישירות מהדפדפן של הלקוח לאחסון הענן.
-- **הפתרון:** שימוש ב-Cloudinary Upload Widget דרך דף אדמין ייעודי (`courses/manager/upload/`). הדף מיועד רק למנהלי מערכת (Superusers).
-- **מגבלות Cloudinary חינמי:** גם עם ה-Widget, קיימת מגבלה קשיחה של מקסימום 100MB לקובץ בחשבון חינמי. הגדרת `chunk_size` עוזרת ליציבות ההעלאה, אך אינה עוקפת את מגבלת הגודל הכוללת.
-- **המלצה:** עבור סרטונים שניתן לדחוס ל-100MB (באמצעות כלי כמו VLC או Clipchamp - למשל וידאו של כ-30 דקות ב-300kbps), זו הדרך האמינה והחלקה ביותר שמתנגנת ישירות דרך תגית `<video>` רגילה.
+---
 
-## 2. שילוב סרטוני YouTube (Embedded)
-- **המטרה:** פתרון חינמי ללא הגבלת גודל לסרטונים ארוכים (חיסכון באחסון).
-- **הפתרון בקוד:** הדף `video_detail.html` יודע לזהות קישורי יוטיוב במספר פורמטים (`youtube.com/watch?v=`, `youtu.be/`, `youtube.com/embed/`) ולהמיר אותם אוטומטית לנגן בתוך iframe תקני.
-- **אתגר אבטחת ארגונים (שגיאה 153):** כאשר מעלים סרטונים דרך חשבון Google Workspace (חשבון מייל ארגוני/אקדמי), ה-workspace עצמו נוטה לחסום את האפשרות לבצע Embed באתרים חיצוניים מטעמי אבטחה, אפילו אם מסמנים במפורש "Allow Embedding" ולא משנה אם הסרטון הוא Unlisted.
-- **פתרון מומלץ ליוטיוב:** שימוש בחשבון YouTube פרטי רגיל (סיומת `@gmail.com`) להעלאת הוידאו כ-Unlisted (לא רשום). זה יאפשר הטמעה תקינה באתר שלך ללא חסימות.
+## 🏗️ Core Architecture & Stack
+- **Framework:** Django 5.x
+- **Database:** SQLite (Local Dev) -> PostgreSQL (Production via Railway.app)
+- **Deployment:** Railway.app (via GitHub push). Uses `gunicorn`, `whitenoise` for static files.
+- **Python Version:** 3.12+ 
 
-## 3. שילוב סרטוני Google Drive
-- **המטרה:** חלופה חינמית נוספת המשמשת "מחסן" קבצים ללא הגבלת גודל (עד 15GB חינם לחשבון).
-- **הפתרון בקוד:** האתר מזהה קישורי גוגל דרייב ומוסיף טיפול מיוחד ל-iframe, הכולל המרה של נתיב הצפייה מ-`view` ל-`preview?embedded=true`. הוספנו ל-iframe הגדרות `referrerpolicy="no-referrer"` ו-`sandbox` נרחב (כולל `allow-same-origin`) כדי לצמצם תקלות אבטחת רשת (CORS).
-- **אתגר פרטיות הדפדפנים (מסך שחור):** דפדפנים מודרניים רבים חוסמים "עוגיות צד-שלישי" (Third-Party Cookies). הנגן של גוגל דרייב בתוך iframe מחייב גישה לעוגיות אלו, ולכן אצל משתמשים עם הגדרות פרטיות מחמירות או חוסמי מעקב, עשוי להופיע מסך רקע שחור.
-- **מעקף אוטומטי למשתמש קצה:** על גבי המסך השחור (או האפור) תמיד מופיע לחצן קטן (חץ פתיחה `↗`) המאפשר לחניך לצאת ולפתוח את הוידאו ישירות דרך גוגל בחלון נפרד, שם הוידאו יתנגן בצורה חלקה תמיד מאחר והוא כבר לא נחשב "צד שלישי".
+---
 
-## 4. הצבת סרטון באתר הלכה למעשה
-כדי להעלות/לחבר סרטון למערכת, נדרש:
-1. לגשת באדמין לנתיב **`Videos` -> `Add Video`**.
-2. למלא כותרת, בחירת שיעור ופרטים מזהים אחרים.
-3. להדביק את קישור הוידאו החיצוני בשדה **"Cloudinary URL"** המצוי בקטגוריה "Content". לא משנה אם זה Cloudinary, YouTube, או Google Drive – המערכת שלנו יודעת לקחת את הקישור מתוך עמודת ה-URL ולנתב למנגנון ההפעלה המתאים לאותו לינק.
-4. לוודא שהוגדר `Published` כדי שהוא יחשף לחניכים.
+## 🔐 Security & Access Control
+
+### 1. Strict Device Lock ("First Device Wins")
+- **Goal:** Prevent account sharing by binding a user to the exact device and browser they first log in with.
+- **Implementation:**
+  - `accounts/models.py`: Custom `CustomUser` model includes a `device_uuid` field.
+  - `accounts/signals.py`: On `user_logged_in`, if `device_uuid` is null, generate a random UUID and lock it to the user.
+  - `middleware/single_device.py`: Validates every request. If the user's signed cookie `device_token` doesn't match the database `device_uuid`, they are force-logged out with an explicit error message (`messages.error`).
+- **Admin Override:** Superusers/staff bypass this lock. Admins can manually click "Reset device lock" in the Django Admin user list to clear the UUID and allow the user to register a new device.
+
+### 2. Video Download Prevention
+- Cloudinary MP4 `<video>` tags are protected using:
+  - `controlsList="nodownload"` (hides native download button)
+  - `oncontextmenu="return false;"` (disables right-click to save)
+  - A transparent CSS `div` overlaid over the video (leaving the bottom 60px for controls) to absorb clicks and block "enable right-click" browser extensions.
+
+---
+
+## 📹 Video Hosting & Playback
+
+The platform supports multiple video sources handled transparently by the template (`templates/courses/video_detail.html`):
+
+### 1. Cloudinary (Primary Method)
+- **Why:** Bypasses Railway's strict 30s timeout and payload limits (Error 413) for large media uploads.
+- **How:** The Django Admin `Video` change form was overridden (`templates/admin/courses/video/change_form.html`).
+- **Integration:** It injects a custom Javascript Cloudinary Widget directly beneath the standard fields. When the admin clicks "Upload Video via Cloudinary", the file goes *directly* from the browser to Cloudinary in 6MB chunks, bypassing the Django server entirely. Upon success, JS automatically populates the `cloudinary_url` and `public_id` fields for saving. 
+- **Auto-Play:** Cloudinary videos utilize the HTML5 `ended` event listener via JS to automatically redirect the user to the next video in the playlist.
+
+### 2. YouTube
+- Automatically parses `watch?v=`, `youtu.be/`, and `/embed/` links.
+- **Restriction:** Videos from Google Workspace (enterprise/edu) accounts often block external iframe embedding. The site owner must upload to standard `@gmail.com` YouTube accounts as "Unlisted".
+
+### 3. Google Drive
+- Automatically reformats links to `/preview?embedded=true`.
+- Includes extensive iframe sandboxing to prevent CORS blocks.
+- **Drawback:** Due to third-party cookie restrictions, some browsers show a black screen. Users must use the pop-out arrow to view the video. Auto-play (`ended` event) does not work with Google Drive iframes due to cross-origin security.
+
+---
+
+## 🎨 UI & Frontend Design
+- **Styling:** Primarily inline HTML styles and Vanilla CSS with a dark-mode aesthetic (slate/indigo/violet accents).
+- **Video Player Layout:** The video player screen uses a modern CSS Grid layout (1fr 350px). The main video is on the left, and a sticky, scrollable sidebar "Playlist" is on the right, highlighting the active video.
+
+---
+
+## 🚀 Deployment Logistics (Railway.app)
+- We rely on environment variables (`python-decouple`) heavily.
+- `DATABASE_URL`: Injected automatically by Railway Postgres.
+- `CLOUDINARY_CLOUD_NAME`: Needed by the frontend JS widget in the admin.
+- `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`: Set manually in the Railway variables dashboard. 
+- **Important:** If static files are failing to load, ensure `whitenoise.runserver_nostatic` is above `staticfiles` in `INSTALLED_APPS` and `WhiteNoiseMiddleware` is directly under `SecurityMiddleware`.
