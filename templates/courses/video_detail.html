@@ -54,9 +54,28 @@
         <h1 style="font-size:1.8rem;color:#c7d2fe;margin-bottom:20px;">{{ video.title }}</h1>
 
         {% if video.cloudinary_url or video.file %}
+
+        <!-- Zoom Controls for Native MP4 / Cloudinary -->
+        {% with url=video.cloudinary_url|default_if_none:"" %}
+        {% if "youtube.com" not in url and "youtu.be" not in url and "drive.google.com" not in url %}
+        <div style="display:flex; gap:10px; margin-bottom:16px; align-items:center; flex-wrap:wrap;">
+            <button id="btn-zoom-in"
+                style="background:#4f46e5; color:white; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; transition:background 0.2s;">🔍
+                Zoom In (+)</button>
+            <button id="btn-zoom-out"
+                style="background:#4f46e5; color:white; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; transition:background 0.2s;">🔍
+                Zoom Out (-)</button>
+            <button id="btn-zoom-reset"
+                style="background:#334155; color:white; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; transition:background 0.2s;">Reset</button>
+            <span style="color:#94a3b8; font-size:0.85rem; margin-left:auto; display:none;" id="zoom-hint-text">💡 You
+                can drag the video to pan when zoomed in.</span>
+        </div>
+        {% endif %}
+        {% endwith %}
+
         <div
             style="background:#000;border-radius:12px;overflow:hidden;margin-bottom:24px;width:100%;aspect-ratio:16/9;position:relative;">
-            {% with url=video.cloudinary_url %}
+            {% with url=video.cloudinary_url|default_if_none:"" %}
             {% if "youtube.com/embed/" in url %}
             {# ── YouTube /embed/ URL — use directly ─────────────────────────── #}
             <iframe src="{{ url }}" style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;"
@@ -87,27 +106,21 @@
                 allowfullscreen referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin">
             </iframe>
             {% endif %}
-            {% elif url %}
+            {% elif url or video.file %}
             {# ── Cloudinary / direct MP4 ──────────────────────────────────── #}
-            <div style="width:100%;height:100%;position:relative;">
-                <video id="main-video-player" controls controlsList="nodownload" oncontextmenu="return false;"
-                    style="width:100%;height:100%;display:block;" preload="metadata">
-                    <source src="{{ url }}" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
-                <!-- Overlay to defeat right-click extensions by absorbing clicks, leaving bottom 60px for controls -->
-                <div style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 60px);z-index:10;"
-                    oncontextmenu="return false;"></div>
-            </div>
-            {% elif video.file %}
-            <div style="width:100%;height:100%;position:relative;">
-                <video id="main-video-player" controls controlsList="nodownload" oncontextmenu="return false;"
-                    style="width:100%;height:100%;display:block;" preload="metadata">
-                    <source src="{{ video.file.url }}" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
-                <div style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 60px);z-index:10;"
-                    oncontextmenu="return false;"></div>
+            <div id="video-zoom-container" style="width:100%;height:100%;overflow:hidden;position:relative;">
+                <div id="video-zoom-wrapper"
+                    style="width:100%;height:100%;transform-origin:center center;transition:transform 0.2s ease-out;">
+                    <video id="main-video-player" controls controlsList="nodownload" oncontextmenu="return false;"
+                        style="width:100%;height:100%;display:block;" preload="metadata">
+                        <source src="{% if url %}{{ url }}{% else %}{{ video.file.url }}{% endif %}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <!-- Overlay prevents right-click and doubles as drag surface when zoomed -->
+                    <div id="video-drag-overlay"
+                        style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 60px);z-index:10;cursor:default;"
+                        oncontextmenu="return false;"></div>
+                </div>
             </div>
             {% endif %}
             {% endwith %}
@@ -169,5 +182,108 @@
     });
 </script>
 {% endif %}
+
+<!-- Zoom & Pan Script -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const videoZoomContainer = document.getElementById("video-zoom-container");
+        const videoZoomWrapper = document.getElementById("video-zoom-wrapper");
+        const dragOverlay = document.getElementById("video-drag-overlay");
+
+        if (videoZoomWrapper && dragOverlay) {
+            let currentScale = 1;
+            let isDragging = false;
+            let startX, startY, translateX = 0, translateY = 0;
+
+            const btnZoomIn = document.getElementById("btn-zoom-in");
+            const btnZoomOut = document.getElementById("btn-zoom-out");
+            const btnZoomReset = document.getElementById("btn-zoom-reset");
+            const hintText = document.getElementById("zoom-hint-text");
+
+            function updateTransform() {
+                // If returning to normal, reset translation
+                if (currentScale <= 1) {
+                    currentScale = 1;
+                    translateX = 0;
+                    translateY = 0;
+                    if (hintText) hintText.style.display = 'none';
+                } else {
+                    if (hintText) hintText.style.display = 'inline-block';
+                }
+
+                videoZoomWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
+
+                if (currentScale > 1) {
+                    dragOverlay.style.cursor = isDragging ? "grabbing" : "grab";
+                } else {
+                    dragOverlay.style.cursor = "default";
+                }
+            }
+
+            if (btnZoomIn) {
+                btnZoomIn.addEventListener("click", () => {
+                    currentScale = Math.min(currentScale + 0.5, 4);
+                    updateTransform();
+                });
+            }
+
+            if (btnZoomOut) {
+                btnZoomOut.addEventListener("click", () => {
+                    currentScale = Math.max(currentScale - 0.5, 1);
+                    updateTransform();
+                });
+            }
+
+            if (btnZoomReset) {
+                btnZoomReset.addEventListener("click", () => {
+                    currentScale = 1;
+                    updateTransform();
+                });
+            }
+
+            // Dragging Logic
+            dragOverlay.addEventListener("mousedown", (e) => {
+                // Only allow dragging if zoomed in
+                if (currentScale > 1) {
+                    isDragging = true;
+                    // Keep track of where we click relative to the current translation
+                    startX = e.clientX - translateX;
+                    startY = e.clientY - translateY;
+                    dragOverlay.style.cursor = "grabbing";
+
+                    // Temporarily remove transition for instant 1:1 dragging mapping
+                    videoZoomWrapper.style.transition = "none";
+                }
+            });
+
+            window.addEventListener("mousemove", (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+
+                videoZoomWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
+            });
+
+            window.addEventListener("mouseup", () => {
+                if (isDragging) {
+                    isDragging = false;
+                    dragOverlay.style.cursor = "grab";
+                    // Restore smooth transition for the buttons
+                    videoZoomWrapper.style.transition = "transform 0.2s ease-out";
+                }
+            });
+
+            // Handle mouse leaving the window while dragging
+            window.addEventListener("mouseleave", () => {
+                if (isDragging) {
+                    isDragging = false;
+                    dragOverlay.style.cursor = "grab";
+                    videoZoomWrapper.style.transition = "transform 0.2s ease-out";
+                }
+            });
+        }
+    });
+</script>
 
 {% endblock %}
