@@ -34,6 +34,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import logout
+from django.contrib import messages
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.http import HttpRequest
 from django.shortcuts import redirect
@@ -157,7 +158,14 @@ class SingleDeviceLoginMiddleware:
     # ── Helpers ────────────────────────────────────────────────────────────
 
     def _force_logout(self, request: HttpRequest):
-        """Log the user out and redirect to the login page."""
+        """Log the user out, show a message, and redirect to the login page."""
+        if getattr(request, "user", None) and request.user.is_authenticated:
+            # We don't want to show this message if they are already logged out
+            messages.error(
+                request, 
+                "Your account is locked to the original device/browser you registered with. "
+                "You cannot log in from this device."
+            )
         logout(request)
         login_url = getattr(settings, "LOGIN_URL", "/accounts/login/")
         response = redirect(login_url)

@@ -1,6 +1,43 @@
 {% extends "base.html" %}
 {% block title %}{{ video.title }} — MarathonLMS{% endblock %}
 {% block content %}
+<style>
+    .video-grid {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 24px;
+        align-items: start;
+    }
+
+    @media (max-width: 960px) {
+        .video-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .playlist-item {
+        display: block;
+        padding: 12px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+
+    .playlist-item.active {
+        background: #4f46e5;
+        color: #fff;
+    }
+
+    .playlist-item.inactive {
+        background: #0f172a;
+        color: #cbd5e1;
+    }
+
+    .playlist-item.inactive:hover {
+        background: #1e293b;
+    }
+</style>
+
 <div style="margin-bottom:24px;">
     {% if video.category %}
     <a href="{% url 'courses:video-list' video.category.pk %}" style="color:#6366f1;text-decoration:none;">
@@ -11,80 +48,126 @@
     {% endif %}
 </div>
 
-<h1 style="font-size:1.8rem;color:#c7d2fe;margin-bottom:20px;">{{ video.title }}</h1>
+<div class="video-grid">
+    <!-- LEFT: Main Video Content -->
+    <div>
+        <h1 style="font-size:1.8rem;color:#c7d2fe;margin-bottom:20px;">{{ video.title }}</h1>
 
-{% if video.cloudinary_url or video.file %}
-<div
-    style="background:#000;border-radius:12px;overflow:hidden;margin-bottom:24px;max-width:900px;aspect-ratio:16/9;position:relative;">
-    {% with url=video.cloudinary_url %}
-    {% if "youtube.com/embed/" in url %}
-    {# ── YouTube /embed/ URL — use directly ─────────────────────────── #}
-    <iframe src="{{ url }}" style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-    </iframe>
-    {% elif "youtube.com/watch?v=" in url %}
-    {# ── YouTube watch URL — extract 11-char video ID from pos 32 ────── #}
-    <iframe src="https://www.youtube.com/embed/{{ url|slice:'32:43' }}"
-        style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-    </iframe>
-    {% elif "youtu.be/" in url %}
-    {# ── youtu.be short URL — extract 11-char ID from pos 17 ────────── #}
-    <iframe src="https://www.youtube.com/embed/{{ url|slice:'17:28' }}"
-        style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-    </iframe>
-    {% elif "drive.google.com" in url %}
-    {# ── Google Drive /preview embed — free, no size limit ───────────── #}
-    {% if "/file/d/" in url %}
-    <iframe src="https://drive.google.com/file/d/{{ url|slice:'32:65' }}/preview?embedded=true"
-        style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen
-        referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin">
-    </iframe>
-    {% else %}
-    <iframe src="{{ url }}" style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen
-        referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin">
-    </iframe>
-    {% endif %}
-    {% elif url %}
-    {# ── Cloudinary / direct MP4 ──────────────────────────────────── #}
-    <div style="width:100%;height:100%;position:relative;">
-        <video controls controlsList="nodownload" oncontextmenu="return false;"
-            style="width:100%;height:100%;display:block;" preload="metadata">
-            <source src="{{ url }}" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
-        <!-- Overlay to defeat right-click extensions by absorbing clicks, leaving bottom 60px for controls -->
-        <div style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 60px);z-index:10;"
-            oncontextmenu="return false;"></div>
+        {% if video.cloudinary_url or video.file %}
+        <div
+            style="background:#000;border-radius:12px;overflow:hidden;margin-bottom:24px;width:100%;aspect-ratio:16/9;position:relative;">
+            {% with url=video.cloudinary_url %}
+            {% if "youtube.com/embed/" in url %}
+            {# ── YouTube /embed/ URL — use directly ─────────────────────────── #}
+            <iframe src="{{ url }}" style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;"
+                allowfullscreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+            </iframe>
+            {% elif "youtube.com/watch?v=" in url %}
+            {# ── YouTube watch URL — extract 11-char video ID from pos 32 ────── #}
+            <iframe src="https://www.youtube.com/embed/{{ url|slice:'32:43' }}"
+                style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+            </iframe>
+            {% elif "youtu.be/" in url %}
+            {# ── youtu.be short URL — extract 11-char ID from pos 17 ────────── #}
+            <iframe src="https://www.youtube.com/embed/{{ url|slice:'17:28' }}"
+                style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+            </iframe>
+            {% elif "drive.google.com" in url %}
+            {# ── Google Drive /preview embed — free, no size limit ───────────── #}
+            {% if "/file/d/" in url %}
+            <iframe src="https://drive.google.com/file/d/{{ url|slice:'32:65' }}/preview?embedded=true"
+                style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;" allowfullscreen
+                referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin">
+            </iframe>
+            {% else %}
+            <iframe src="{{ url }}" style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;"
+                allowfullscreen referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin">
+            </iframe>
+            {% endif %}
+            {% elif url %}
+            {# ── Cloudinary / direct MP4 ──────────────────────────────────── #}
+            <div style="width:100%;height:100%;position:relative;">
+                <video id="main-video-player" controls controlsList="nodownload" oncontextmenu="return false;"
+                    style="width:100%;height:100%;display:block;" preload="metadata">
+                    <source src="{{ url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <!-- Overlay to defeat right-click extensions by absorbing clicks, leaving bottom 60px for controls -->
+                <div style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 60px);z-index:10;"
+                    oncontextmenu="return false;"></div>
+            </div>
+            {% elif video.file %}
+            <div style="width:100%;height:100%;position:relative;">
+                <video id="main-video-player" controls controlsList="nodownload" oncontextmenu="return false;"
+                    style="width:100%;height:100%;display:block;" preload="metadata">
+                    <source src="{{ video.file.url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 60px);z-index:10;"
+                    oncontextmenu="return false;"></div>
+            </div>
+            {% endif %}
+            {% endwith %}
+        </div>
+        {% else %}
+        <p style="color:#f87171;margin-bottom:24px;">⚠️ No video file attached to this lesson.</p>
+        {% endif %}
+
+        {% if video.description %}
+        <div
+            style="background:#1a1d27;border-left:3px solid #6366f1;padding:16px 20px;border-radius:8px;color:#94a3b8;">
+            {{ video.description|linebreaks }}
+        </div>
+        {% endif %}
+
+        {% if not video.is_published and request.user.is_staff %}
+        <p
+            style="margin-top:16px;padding:10px 16px;background:#2a1a1a;border-left:3px solid #f87171;border-radius:6px;color:#f87171;font-size:.875rem;">
+            🔒 This video is <strong>unpublished</strong> and visible to staff only.
+        </p>
+        {% endif %}
     </div>
-    {% elif video.file %}
-    <div style="width:100%;height:100%;position:relative;">
-        <video controls controlsList="nodownload" oncontextmenu="return false;"
-            style="width:100%;height:100%;display:block;" preload="metadata">
-            <source src="{{ video.file.url }}" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
-        <div style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 60px);z-index:10;"
-            oncontextmenu="return false;"></div>
+
+    <!-- RIGHT: Sidebar Playlist -->
+    <div
+        style="background:#1e293b; border-radius:12px; padding:16px; position:sticky; top:24px; max-height:85vh; overflow-y:auto;">
+        <h3
+            style="color:#94a3b8; font-size:1.1rem; margin-top:0; margin-bottom:16px; border-bottom:1px solid #334155; padding-bottom:12px;">
+            Course Content
+        </h3>
+        <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;">
+            {% for item in playlist %}
+            <li>
+                <a href="{% url 'courses:video-detail' item.pk %}"
+                    class="playlist-item {% if item.pk == video.pk %}active{% else %}inactive{% endif %}">
+                    <div
+                        style="font-size:0.75rem; opacity:0.8; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">
+                        Video {{ forloop.counter }}
+                    </div>
+                    <div style="font-weight:500; font-size:0.95rem; line-height:1.3;">
+                        {{ item.title }}
+                    </div>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
     </div>
-    {% endif %}
-    {% endwith %}
 </div>
-{% else %}
-<p style="color:#f87171;margin-bottom:24px;">⚠️ No video file attached to this lesson.</p>
+
+{% if next_video_url %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const videoElement = document.getElementById("main-video-player");
+        if (videoElement) {
+            videoElement.addEventListener("ended", function () {
+                window.location.href = "{{ next_video_url }}";
+            });
+        }
+    });
+</script>
 {% endif %}
 
-{% if video.description %}
-<div style="background:#1a1d27;border-left:3px solid #6366f1;padding:16px 20px;border-radius:8px;color:#94a3b8;">
-    {{ video.description|linebreaks }}
-</div>
-{% endif %}
-
-{% if not video.is_published and request.user.is_staff %}
-<p
-    style="margin-top:16px;padding:10px 16px;background:#2a1a1a;border-left:3px solid #f87171;border-radius:6px;color:#f87171;font-size:.875rem;">
-    🔒 This video is <strong>unpublished</strong> and visible to staff only.
-</p>
-{% endif %}
 {% endblock %}

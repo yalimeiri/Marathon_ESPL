@@ -26,11 +26,17 @@ logger = logging.getLogger("middleware.single_device")
 
 @receiver(user_logged_in)
 def on_user_logged_in(sender, request, user, **kwargs):
-    """Generate a new device UUID, persist it, and stash it on the request."""
-    new_uuid = uuid.uuid4()
-    user.device_uuid = new_uuid
-    user.save(update_fields=["device_uuid"])
+    """
+    Generate a new device UUID only if the user doesn't have one 
+    (first-device-wins policy).
+    """
+    if not user.device_uuid:
+        new_uuid = uuid.uuid4()
+        user.device_uuid = new_uuid
+        user.save(update_fields=["device_uuid"])
 
-    # Stash on request so SingleDeviceLoginMiddleware can set the cookie.
-    request._new_device_uuid = str(new_uuid)
-    logger.info("Device UUID issued for user '%s': %s", user.username, new_uuid)
+        # Stash on request so SingleDeviceLoginMiddleware can set the cookie.
+        request._new_device_uuid = str(new_uuid)
+        logger.info("Device UUID issued for user '%s': %s", user.username, new_uuid)
+    else:
+        logger.info("User '%s' is already bound to a device.", user.username)

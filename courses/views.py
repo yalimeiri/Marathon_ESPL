@@ -80,6 +80,31 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
             return Video.objects.all()
         return Video.objects.filter(is_published=True)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        video = self.get_object()
+        
+        # Get all videos in the same category (published only for learners)
+        if self.request.user.is_staff:
+            playlist = Video.objects.filter(category=video.category).order_by("order", "title")
+        else:
+            playlist = Video.objects.filter(category=video.category, is_published=True).order_by("order", "title")
+            
+        context['playlist'] = playlist
+        
+        # Find the next video in the list
+        playlist_list = list(playlist)
+        try:
+            current_idx = playlist_list.index(video)
+            if current_idx + 1 < len(playlist_list):
+                context['next_video'] = playlist_list[current_idx + 1]
+                from django.urls import reverse
+                context['next_video_url'] = reverse('courses:video-detail', args=[context['next_video'].pk])
+        except ValueError:
+            pass
+            
+        return context
+
 
 # ── Upload Manager (superuser only) ─────────────────────────────────────────
 
