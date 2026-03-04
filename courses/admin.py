@@ -48,6 +48,7 @@ def unpublish_videos(modeladmin, request, queryset):
 
 @admin.register(Video)
 class VideoAdmin(admin.ModelAdmin):
+    change_form_template = "admin/courses/video/change_form.html"
     actions = [publish_videos, unpublish_videos]
 
     list_display = (
@@ -83,3 +84,14 @@ class VideoAdmin(admin.ModelAdmin):
         if obj.file:
             return format_html('<a href="{}" target="_blank">▶ View</a>', obj.file.url)
         return "—"
+
+    def render_change_form(self, request, context, add=False, change=False, form_url='', obj=None):
+        """
+        Inject the Cloudinary cloud name into the admin form context 
+        so the custom JS upload widget can initialize properly.
+        """
+        from django.conf import settings
+        context.update({
+            'cloudinary_cloud_name': getattr(settings, 'CLOUDINARY_CLOUD_NAME', '')
+        })
+        return super().render_change_form(request, context, add=add, change=change, form_url=form_url, obj=obj)
