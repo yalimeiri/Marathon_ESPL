@@ -31,12 +31,13 @@
     document.addEventListener('DOMContentLoaded', function () {
         var myWidget = cloudinary.createUploadWidget({
             cloudName: '{{ cloudinary_cloud_name }}',
-            uploadPreset: 'marathon_videos',
-            sources: ['local', 'url', 'google_drive'],
-            multiple: false,
+            uploadPreset: 'marathon_unsigned',
             resourceType: 'video',
-            clientAllowedFormats: ['mp4', 'mov', 'avi', 'mkv', 'webm'],
-            maxFileSize: 104857600 // 100MB
+            maxFileSize: 1073741824, // 1GB limit
+            chunk_size: 6000000,
+            clientAllowedFormats: ['mp4', 'mov', 'webm', 'mkv', 'avi'],
+            sources: ['local', 'url', 'google_drive'],
+            multiple: false
         }, (error, result) => {
             if (!error && result && result.event === "success") {
                 console.log('Admin Cloudinary Upload Success: ', result.info);
