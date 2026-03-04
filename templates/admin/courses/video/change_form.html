@@ -1,0 +1,82 @@
+{% extends "admin/change_form.html" %}
+
+{% block after_field_sets %}
+{{ block.super }}
+
+<!-- Custom Cloudinary Upload Widget Injection -->
+<div
+    style="margin: 20px 0; padding: 20px; background: #e0f2fe; border: 2px dashed #38bdf8; border-radius: 8px; text-align: center;">
+    <h3 style="margin-top: 0; color: #0284c7; font-size: 1.2rem;">☁️ Direct Cloudinary Video Upload</h3>
+    <p
+        style="color: #0369a1; margin-bottom: 15px; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+        Uploading massive video files (e.g. 50MB+) through standard Django file inputs will often crash the server due
+        to timeout or payload size limits.
+        Use this button instead to safely upload directly from your browser to Cloudinary's cloud storage.
+    </p>
+
+    <button type="button" id="cloudinary_admin_upload_btn"
+        style="background: #0ea5e9; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background-color 0.2s;">
+        Upload Video via Cloudinary
+    </button>
+
+    <p style="margin-top: 15px; font-size: 0.85rem; color: #0284c7;">
+        Once the upload finishes, the <strong>Cloudinary URL</strong> and <strong>Public ID</strong> fields above will
+        be populated automatically.<br>
+        <strong>⚠️ Don't forget to press "Save" at the bottom of the page!</strong>
+    </p>
+</div>
+
+<script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        var myWidget = cloudinary.createUploadWidget({
+            cloudName: '{{ cloudinary_cloud_name }}',
+            uploadPreset: 'marathon_videos',
+            sources: ['local', 'url', 'google_drive'],
+            multiple: false,
+            resourceType: 'video',
+            clientAllowedFormats: ['mp4', 'mov', 'avi', 'mkv', 'webm'],
+            maxFileSize: 104857600 // 100MB
+        }, (error, result) => {
+            if (!error && result && result.event === "success") {
+                console.log('Admin Cloudinary Upload Success: ', result.info);
+
+                // Populate the admin fields
+                var urlField = document.getElementById('id_cloudinary_url');
+                var publicIdField = document.getElementById('id_public_id');
+
+                if (urlField) {
+                    urlField.value = result.info.secure_url;
+                    // Flash background to indicate change
+                    urlField.style.backgroundColor = "#bbf7d0";
+                    setTimeout(() => urlField.style.backgroundColor = "", 1500);
+                }
+                if (publicIdField) {
+                    publicIdField.value = result.info.public_id;
+                    publicIdField.style.backgroundColor = "#bbf7d0";
+                    setTimeout(() => publicIdField.style.backgroundColor = "", 1500);
+                }
+
+                // If title is empty, prefill it with the original filename
+                var titleField = document.getElementById('id_title');
+                if (titleField && !titleField.value) {
+                    var name = result.info.original_filename;
+                    // Replace underscores and properly capitalize
+                    name = name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    titleField.value = name;
+                }
+
+                alert('✅ Video successfully uploaded and parsed!\n\nThe Cloudinary URL fields have been auto-filled. Please scroll down and press "Save" to commit these changes to the database.');
+            }
+        });
+
+        var btn = document.getElementById("cloudinary_admin_upload_btn");
+        if (btn) {
+            btn.addEventListener("click", function (e) {
+                e.preventDefault(); // Prevent accidental form submission
+                myWidget.open();
+            }, false);
+        }
+    });
+</script>
+{% endblock %}
