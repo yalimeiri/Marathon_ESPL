@@ -344,6 +344,37 @@
                 updateTransform();
             }, { passive: false });
         }
+
+        // Global Keyboard Controls for Video Playback
+        const videoElement = document.getElementById("main-video-player");
+        if (videoElement) {
+            window.addEventListener("keydown", (e) => {
+                // Ignore keys if the user is typing in an input field (e.g., search or comments)
+                if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
+                    return;
+                }
+
+                switch (e.code) {
+                    case "Space":
+                        // Prevent the spacebar from scrolling down the page
+                        e.preventDefault();
+                        if (videoElement.paused || videoElement.ended) {
+                            videoElement.play();
+                        } else {
+                            videoElement.pause();
+                        }
+                        break;
+                    case "ArrowRight":
+                        e.preventDefault();
+                        videoElement.currentTime += 5;
+                        break;
+                    case "ArrowLeft":
+                        e.preventDefault();
+                        videoElement.currentTime -= 5;
+                        break;
+                }
+            });
+        }
     });
 </script>
 
