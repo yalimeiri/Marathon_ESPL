@@ -55,21 +55,13 @@
 
         {% if video.cloudinary_url or video.file %}
 
-        <!-- Zoom Controls for Native MP4 / Cloudinary -->
+        <!-- Native MP4 / Cloudinary -> Features Custom Zoom & Fullscreen -->
         {% with url=video.cloudinary_url|default_if_none:"" %}
         {% if "youtube.com" not in url and "youtu.be" not in url and "drive.google.com" not in url %}
-        <div style="display:flex; gap:10px; margin-bottom:16px; align-items:center; flex-wrap:wrap;">
-            <button id="btn-zoom-in"
-                style="background:#4f46e5; color:white; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; transition:background 0.2s;">🔍
-                Zoom In (+)</button>
-            <button id="btn-zoom-out"
-                style="background:#4f46e5; color:white; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; transition:background 0.2s;">🔍
-                Zoom Out (-)</button>
-            <button id="btn-zoom-reset"
-                style="background:#334155; color:white; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; transition:background 0.2s;">Reset</button>
-            <span style="color:#94a3b8; font-size:0.85rem; margin-left:auto; display:none;" id="zoom-hint-text">💡 You
-                can drag the video to pan when zoomed in.</span>
-        </div>
+        <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:12px;" id="zoom-hint-text">
+            💡 <strong>Pro Tip:</strong> Hover over the video to use the Zoom controls or scroll with your mouse. Drag
+            to pan around.
+        </p>
         {% endif %}
         {% endwith %}
 
@@ -108,20 +100,55 @@
             {% endif %}
             {% elif url or video.file %}
             {# ── Cloudinary / direct MP4 ──────────────────────────────────── #}
-            <div id="video-zoom-container" style="width:100%;height:100%;overflow:hidden;position:relative;">
+            <div id="video-zoom-container"
+                style="width:100%;height:100%;overflow:hidden;position:relative;background:#000;">
+
+                <!-- The Video Element (scaled and translated) -->
                 <div id="video-zoom-wrapper"
                     style="width:100%;height:100%;transform-origin:center center;transition:transform 0.2s ease-out;">
+                    <!-- Hide native controls so we can fully control the experience, or at least disable the native fullscreen button if possible. 
+                         Instead, we'll keep native controls but overlay our own fullscreen button -->
                     <video id="main-video-player" controls controlsList="nodownload" oncontextmenu="return false;"
                         style="width:100%;height:100%;display:block;" preload="metadata">
                         <source src="{% if url %}{{ url }}{% else %}{{ video.file.url }}{% endif %}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
-                    <!-- Overlay prevents right-click and doubles as drag surface when zoomed -->
-                    <div id="video-drag-overlay"
-                        style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 60px);z-index:10;cursor:default;"
-                        oncontextmenu="return false;"></div>
+                </div>
+
+                <!-- The transparent overlay to absorb clicks for both dragging AND preventing native right click -->
+                <!-- We leave the bottom 60px open so the user can interact with the native video timeline/volume -->
+                <div id="video-drag-overlay"
+                    style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 60px);z-index:10;cursor:default;"
+                    oncontextmenu="return false;"></div>
+
+                <!-- Floating Toolbar injected INSIDE the container so it persists in fullscreen -->
+                <div id="custom-zoom-toolbar"
+                    style="position:absolute; top:20px; right:20px; z-index:20; display:flex; gap:8px; background:rgba(15, 23, 42, 0.7); padding:8px; border-radius:8px; backdrop-filter:blur(4px); transition:opacity 0.3s;">
+                    <button id="btn-zoom-in" title="Zoom In"
+                        style="background:#4f46e5; color:white; border:none; width:36px; height:36px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:1.1rem; display:flex; align-items:center; justify-content:center;">+</button>
+                    <button id="btn-zoom-out" title="Zoom Out"
+                        style="background:#4f46e5; color:white; border:none; width:36px; height:36px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:1.1rem; display:flex; align-items:center; justify-content:center;">-</button>
+                    <button id="btn-zoom-reset" title="Reset Zoom"
+                        style="background:#334155; color:white; border:none; padding:0 12px; height:36px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem;">Reset</button>
+                    <!-- Custom Fullscreen Toggle to fullscreen the container, NOT the video -->
+                    <button id="btn-custom-fullscreen" title="Toggle Fullscreen"
+                        style="background:#0ea5e9; color:white; border:none; padding:0 12px; height:36px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; margin-left:8px;">⛶
+                        Fullscreen</button>
                 </div>
             </div>
+
+            <style>
+                /* Hide the native fullscreen button from Chromium/Webkit browsers to force use of our custom button */
+                video::-webkit-media-controls-fullscreen-button {
+                    display: none;
+                }
+
+                /* Fade toolbar out when not hovering the container */
+                #video-zoom-container:not(:hover) #custom-zoom-toolbar {
+                    opacity: 0;
+                    pointer-events: none;
+                }
+            </style>
             {% endif %}
             {% endwith %}
         </div>
@@ -198,7 +225,7 @@
             const btnZoomIn = document.getElementById("btn-zoom-in");
             const btnZoomOut = document.getElementById("btn-zoom-out");
             const btnZoomReset = document.getElementById("btn-zoom-reset");
-            const hintText = document.getElementById("zoom-hint-text");
+            const btnFullscreen = document.getElementById("btn-custom-fullscreen");
 
             function updateTransform() {
                 // If returning to normal, reset translation
@@ -206,9 +233,6 @@
                     currentScale = 1;
                     translateX = 0;
                     translateY = 0;
-                    if (hintText) hintText.style.display = 'none';
-                } else {
-                    if (hintText) hintText.style.display = 'inline-block';
                 }
 
                 videoZoomWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
@@ -238,6 +262,29 @@
                 btnZoomReset.addEventListener("click", () => {
                     currentScale = 1;
                     updateTransform();
+                });
+            }
+
+            // Custom Fullscreen Handler
+            if (btnFullscreen) {
+                btnFullscreen.addEventListener("click", () => {
+                    if (!document.fullscreenElement) {
+                        if (videoZoomContainer.requestFullscreen) {
+                            videoZoomContainer.requestFullscreen();
+                        } else if (videoZoomContainer.webkitRequestFullscreen) { /* Safari */
+                            videoZoomContainer.webkitRequestFullscreen();
+                        } else if (videoZoomContainer.msRequestFullscreen) { /* IE11 */
+                            videoZoomContainer.msRequestFullscreen();
+                        }
+                    } else {
+                        if (document.exitFullscreen) {
+                            document.exitFullscreen();
+                        } else if (document.webkitExitFullscreen) { /* Safari */
+                            document.webkitExitFullscreen();
+                        } else if (document.msExitFullscreen) { /* IE11 */
+                            document.msExitFullscreen();
+                        }
+                    }
                 });
             }
 
