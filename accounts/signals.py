@@ -40,3 +40,7 @@ def on_user_logged_in(sender, request, user, **kwargs):
         logger.info("Device UUID issued for user '%s': %s", user.username, new_uuid)
     else:
         logger.info("User '%s' is already bound to a device.", user.username)
+        # We must STILL attach the existing UUID to the request.
+        # Why? Because if they are logging in from a new device, the middleware
+        # needs to see they have an existing lock and check if their browser cookie matches it.
+        request._existing_device_uuid = str(user.device_uuid)

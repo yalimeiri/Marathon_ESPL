@@ -76,7 +76,23 @@ class SingleDeviceLoginMiddleware:
 
         response = self.get_response(request)
 
-        # After the view runs: if this was a fresh login, set the cookie.
+        # ── INTERCEPT POST-LOGIN ────────────────────────────────────────────────
+        # If the user just authenticated (signals fired), we must check their 
+        # existing device lock BEFORE letting them proceed to the site.
+        existing_uuid = getattr(request, "_existing_device_uuid", None)
+        if existing_uuid and request.user.is_authenticated and not request.user.is_staff:
+            signed_token = request.COOKIES.get(self.cookie_name)
+            token_value = _unsign(signed_token) if signed_token else None
+            
+            if token_value != existing_uuid:
+                logger.warning(
+                    "POST-LOGIN BLOCK: User '%s' tried logging in from a second device. "
+                    "Cookie=%s, DB=%s. Instant logout.", request.user.username, token_value, existing_uuid
+                )
+                return self._force_logout(request)
+        # ────────────────────────────────────────────────────────────────────────
+
+        # After the view runs: if this was a fresh *first-time* login, set the cookie.
         self._maybe_set_cookie(request, response)
 
         return response
@@ -96,11 +112,16 @@ class SingleDeviceLoginMiddleware:
         if user.is_staff:
             return None
 
-        # 3. Bypass login/logout URLs to prevent infinite redirect loops when locked out.
+        # 3. Handle login/logout URLs.
+        # We must exempt unauthenticated requests to login/logout to prevent infinite loops.
+        # However, if the user IS authenticated and hitting these, we should still check their
+        # device lock to prevent secondary devices from successfully completing a login cycle.
         path = request.path_info
         login_url = getattr(settings, "LOGIN_URL", "/accounts/login/")
         logout_url = getattr(settings, "LOGOUT_URL", "/accounts/logout/")
-        if path.startswith(login_url) or path.startswith(logout_url):
+        
+        # If they are just logging out, let it pass so the cookie gets cleared
+        if path.startswith(logout_url):
             return None
 
         # 4. Read the signed cookie.
