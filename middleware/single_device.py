@@ -202,6 +202,12 @@ class SingleDeviceLoginMiddleware:
             )
             
         login_url = getattr(settings, "LOGIN_URL", "/accounts/login/")
+        # Foolproof way to guarantee the message displays regardless of session quirks:
+        if "?" in login_url:
+            login_url += "&blocked=1"
+        else:
+            login_url += "?blocked=1"
+            
         response = redirect(login_url)
         # Also delete the stale cookie from the client.
         response.delete_cookie(self.cookie_name)
