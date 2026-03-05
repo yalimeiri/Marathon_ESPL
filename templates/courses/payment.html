@@ -2,15 +2,19 @@
 {% load static %}
 
 {% block content %}
-<div style="max-width: 600px; margin: 2rem auto; padding: 2rem; background-color: #1e293b; border-radius: 8px; color: #f8fafc; text-align: center;">
+<div
+    style="max-width: 600px; margin: 2rem auto; padding: 2rem; background-color: #1e293b; border-radius: 8px; color: #f8fafc; text-align: center;">
     <h2 style="margin-bottom: 1rem; color: #cbd5e1;">Payment Required</h2>
-    <p style="margin-bottom: 2rem;">To access the videos in <strong>{{ category.name }}</strong>, please pay 100 NIS via Bit.</p>
-    
-    <div style="background-color: white; padding: 1rem; border-radius: 8px; display: inline-block; margin-bottom: 2rem;">
+    <p style="margin-bottom: 2rem;">To access the videos in <strong>{{ category.name }}</strong>, please pay 100 NIS via
+        Bit.</p>
+
+    <div
+        style="background-color: white; padding: 1rem; border-radius: 8px; display: inline-block; margin-bottom: 2rem;">
         <!-- Bit QR Code -->
-        <img src="{% static 'images/bit_qr.png' %}" alt="Bit QR Code" style="max-width: 250px; border-radius: 4px;">
+        <img src="https://res.cloudinary.com/dvf4xtfxe/image/upload/v1730000000/bit_qr_example.png" alt="Bit QR Code"
+            style="max-width: 250px; border-radius: 4px;">
     </div>
-    
+
     <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #94a3b8;">
         After sending the payment, please fill out the details below. We will approve your access shortly.
     </p>
@@ -18,25 +22,28 @@
     <form method="POST" action="{% url 'courses:payment' category.pk %}">
         {% csrf_token %}
         <div style="margin-bottom: 1rem; text-align: left;">
-            <label for="payer_name" style="display: block; margin-bottom: 0.5rem; color: #cbd5e1;">Name on Bit Account:</label>
+            <label for="payer_name" style="display: block; margin-bottom: 0.5rem; color: #cbd5e1;">Name on Bit
+                Account:</label>
             <input type="text" id="payer_name" name="payer_name" required
                 style="width: 100%; padding: 0.75rem; border-radius: 4px; border: 1px solid #334155; background-color: #0f172a; color: #f8fafc;">
         </div>
-        
+
         <div style="margin-bottom: 1.5rem; text-align: left;">
-            <label for="phone_number" style="display: block; margin-bottom: 0.5rem; color: #cbd5e1;">Phone Number (Used to Pay):</label>
+            <label for="phone_number" style="display: block; margin-bottom: 0.5rem; color: #cbd5e1;">Phone Number (Used
+                to Pay):</label>
             <input type="text" id="phone_number" name="phone_number" required placeholder="05X-XXXXXXX"
                 style="width: 100%; padding: 0.75rem; border-radius: 4px; border: 1px solid #334155; background-color: #0f172a; color: #f8fafc;">
         </div>
 
-        <button type="submit" 
+        <button type="submit"
             style="width: 100%; padding: 1rem; border-radius: 4px; background-color: #4f46e5; color: white; border: none; font-weight: bold; cursor: pointer; transition: background-color 0.2s;">
             I Have Paid
         </button>
     </form>
-    
+
     <div style="margin-top: 1.5rem;">
-        <a href="{% url 'courses:category-list' %}" style="color: #64748b; text-decoration: none;">&larr; Back to Courses</a>
+        <a href="{% url 'courses:category-list' %}" style="color: #64748b; text-decoration: none;">&larr; Back to
+            Courses</a>
     </div>
 </div>
 {% endblock %}

@@ -36,6 +36,12 @@ if _RAILWAY_PUBLIC and _RAILWAY_PUBLIC not in ALLOWED_HOSTS:
 CSRF_TRUSTED_ORIGINS = [
     f"https://{h}" for h in ALLOWED_HOSTS if h not in ("*", "127.0.0.1", "localhost")
 ]
+# Ensure Railway domains are trusted for POST requests
+if _RAILWAY_DOMAIN:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{_RAILWAY_DOMAIN}")
+if _RAILWAY_PUBLIC:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{_RAILWAY_PUBLIC}")
+
 CSRF_TRUSTED_ORIGINS += config(
     "CSRF_TRUSTED_ORIGINS", default="", cast=Csv()
 )
