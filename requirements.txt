@@ -21,3 +21,6 @@ python-decouple>=3.8
 # Optional: Cloudinary support
 cloudinary>=1.38
 django-cloudinary-storage>=0.3
+
+# Transactional Email (HTTP API — works on Railway, unlike SMTP)
+django-anymail[brevo]>=10.0

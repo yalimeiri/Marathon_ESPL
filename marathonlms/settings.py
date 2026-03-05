@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",  # serves static in dev too (optional)
     "django.contrib.staticfiles",
     # Third-party
+    "anymail",
     "storages",
     # Project apps
     "accounts.apps.AccountsConfig",
@@ -134,22 +135,32 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 # Uses SMTP in production (configure via environment variables on Railway).
 # Falls back to console backend in development (emails print to terminal).
 _EMAIL_HOST = config("EMAIL_HOST", default="")
-if _EMAIL_HOST:
+_BREVO_API_KEY = config("BREVO_API_KEY", default="")
+
+if _BREVO_API_KEY:
+    # ── Brevo HTTP API (works on Railway — SMTP is blocked) ──────────────────
+    EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
+    ANYMAIL = {
+        "BREVO_API_KEY": _BREVO_API_KEY,
+    }
+    DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="")
+elif _EMAIL_HOST:
+    # ── Fallback: SMTP (may be blocked by Railway) ───────────────────────────
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = _EMAIL_HOST
     EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
     _raw_password = config("EMAIL_HOST_PASSWORD", default="")
-    # Gmail App Passwords are displayed with spaces; strip them for SMTP auth.
     EMAIL_HOST_PASSWORD = _raw_password.replace(" ", "")
     EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
     EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-    EMAIL_USE_SSL = False  # Never use both TLS and SSL simultaneously
+    EMAIL_USE_SSL = False
     EMAIL_TIMEOUT = 10
     DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 else:
-    # Local dev: print emails to the console instead of sending them
+    # ── Local dev: print to console ──────────────────────────────────────────
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
     DEFAULT_FROM_EMAIL = "noreply@marathonlms.com"
+
 
 
 
