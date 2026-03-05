@@ -13,7 +13,16 @@ Video Admin features:
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import Category, Video
+from .models import Category, Video, Purchase
+
+
+@admin.register(Purchase)
+class PurchaseAdmin(admin.ModelAdmin):
+    list_display = ('user', 'category', 'status', 'phone_number', 'payer_name', 'created_at')
+    list_filter = ('status', 'category')
+    search_fields = ('user__username', 'phone_number', 'payer_name')
+    readonly_fields = ('created_at', 'updated_at')
+
 
 
 class VideoInline(admin.TabularInline):

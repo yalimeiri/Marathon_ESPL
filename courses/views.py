@@ -24,8 +24,10 @@ from django.http import JsonResponse
 from django.conf import settings
 from django.views.decorators.http import require_POST
 from django.contrib import messages
+import requests
+import json
 
-from .models import Category, Video
+from .models import Category, Video, Purchase
 
 
 class CategoryListView(LoginRequiredMixin, ListView):
@@ -57,6 +59,17 @@ class VideoListView(LoginRequiredMixin, ListView):
             .order_by("order", "title")
         )
 
+    def dispatch(self, request, *args, **kwargs):
+        self.category = get_object_or_404(Category, pk=self.kwargs["pk"])
+        # Check access
+        if not request.user.is_staff:
+            has_access = Purchase.objects.filter(
+                user=request.user, category=self.category, status='APPROVED'
+            ).exists()
+            if not has_access:
+                return redirect('courses:payment', pk=self.category.pk)
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["category"] = self.category
@@ -79,6 +92,17 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
         if self.request.user.is_staff:
             return Video.objects.all()
         return Video.objects.filter(is_published=True)
+
+    def dispatch(self, request, *args, **kwargs):
+        # We need the video to find the category
+        video = self.get_object()
+        if not request.user.is_staff:
+            has_access = Purchase.objects.filter(
+                user=request.user, category=video.category, status='APPROVED'
+            ).exists()
+            if not has_access:
+                return redirect('courses:payment', pk=video.category.pk)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -104,6 +128,65 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
             pass
             
         return context
+
+
+class PaymentView(LoginRequiredMixin, DetailView):
+    """
+    GET /courses/category/<pk>/payment/
+    POST /courses/category/<pk>/payment/
+    """
+    model = Category
+    template_name = "courses/payment.html"
+    context_object_name = "category"
+
+    def post(self, request, *args, **kwargs):
+        category = self.get_object()
+        phone_number = request.POST.get('phone_number', '').strip()
+        payer_name = request.POST.get('payer_name', '').strip()
+
+        if not phone_number or not payer_name:
+            messages.error(request, "Please provide your name and phone number.")
+            return redirect('courses:payment', pk=category.pk)
+
+        # Create or update Purchase
+        purchase, created = Purchase.objects.get_or_create(
+            user=request.user,
+            category=category,
+            defaults={'phone_number': phone_number, 'payer_name': payer_name, 'status': 'PENDING'}
+        )
+        
+        if not created:
+            if purchase.status == 'PENDING':
+                purchase.phone_number = phone_number
+                purchase.payer_name = payer_name
+                purchase.save()
+            elif purchase.status == 'APPROVED':
+                messages.info(request, "You already have access to this course.")
+                return redirect('courses:video-list', pk=category.pk)
+
+        # Send Telegram Message
+        bot_token = '8227368106:AAEbSmIdTFRwy1QUoiuGMJGo8SM_Nfh5-BA'
+        chat_id = '-5199045814'
+        text_message = f"New Pending User: {payer_name} ({phone_number}) claims he paid 100 NIS.\nCourse: {category.name}"
+        
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": text_message,
+            "reply_markup": json.dumps({
+                "inline_keyboard": [[
+                    {"text": "✅ APPROVE", "callback_data": f"approve_{purchase.id}"},
+                    {"text": "❌ REJECT", "callback_data": f"reject_{purchase.id}"}
+                ]]
+            })
+        }
+        try:
+            requests.post(url, json=payload, timeout=5)
+        except Exception as e:
+            print("Telegram Error:", e)
+
+        messages.success(request, "Thank you! We received your payment request. You will be granted access shortly.")
+        return redirect('courses:category-list')
 
 
 # ── Upload Manager (superuser only) ─────────────────────────────────────────

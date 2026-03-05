@@ -12,6 +12,44 @@ activated in settings.py.
 """
 
 from django.db import models
+from django.conf import settings
+
+class Purchase(models.Model):
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='purchases',
+        verbose_name="User"
+    )
+    category = models.ForeignKey(
+        'Category',
+        on_delete=models.CASCADE,
+        related_name='purchases',
+        verbose_name="Category"
+    )
+    phone_number = models.CharField(max_length=20, verbose_name="Bit Phone Number")
+    payer_name = models.CharField(max_length=150, verbose_name="Payer Name")
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='PENDING', verbose_name="Status"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Purchase"
+        verbose_name_plural = "Purchases"
+        unique_together = ('user', 'category')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user} -> {self.category} ({self.status})"
+
 
 
 class Category(models.Model):
