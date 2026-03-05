@@ -130,6 +130,24 @@ LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/courses/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
+# ── Email ────────────────────────────────────────────────────────────────────
+# Uses SMTP in production (configure via environment variables on Railway).
+# Falls back to console backend in development (emails print to terminal).
+_EMAIL_HOST = config("EMAIL_HOST", default="")
+if _EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = _EMAIL_HOST
+    EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+    EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+    EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+    EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+    DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
+else:
+    # Local dev: print emails to the console instead of sending them
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    DEFAULT_FROM_EMAIL = "noreply@marathonlms.com"
+
+
 # ── Internationalisation ────────────────────────────────────────────────────
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
