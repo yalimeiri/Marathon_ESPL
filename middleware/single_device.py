@@ -187,14 +187,20 @@ class SingleDeviceLoginMiddleware:
 
     def _force_logout(self, request: HttpRequest):
         """Log the user out, show a message, and redirect to the login page."""
-        if getattr(request, "user", None) and request.user.is_authenticated:
-            # We don't want to show this message if they are already logged out
+        was_authenticated = getattr(request, "user", None) and request.user.is_authenticated
+        
+        # Flush the session first so we don't lose the message in the reset
+        logout(request)
+        
+        if was_authenticated:
+            # We add the message AFTER logout, so it gets saved to the newly created anonymous session
+            # and survives the redirect to the login page.
             messages.error(
                 request, 
                 "Your account is locked to the original device/browser you registered with. "
                 "You cannot log in from this device."
             )
-        logout(request)
+            
         login_url = getattr(settings, "LOGIN_URL", "/accounts/login/")
         response = redirect(login_url)
         # Also delete the stale cookie from the client.
