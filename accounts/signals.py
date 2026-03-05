@@ -20,6 +20,7 @@ import logging
 
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
+from django.db.models.signals import post_save
 
 logger = logging.getLogger("middleware.single_device")
 
@@ -44,3 +45,43 @@ def on_user_logged_in(sender, request, user, **kwargs):
         # Why? Because if they are logging in from a new device, the middleware
         # needs to see they have an existing lock and check if their browser cookie matches it.
         request._existing_device_uuid = str(user.device_uuid)
+
+
+def on_password_reset(sender, request, user, **kwargs):
+    """
+    When a user resets their password, clear their device_uuid.
+    This revokes the old device binding — the first device to log in
+    after the reset wins the new lock.
+    
+    This prevents an attacker from using 'Forgot Password' to bypass 
+    the single-device lock and gain access from a second device while 
+    the original device retains its lock.
+    """
+    if user.device_uuid:
+        user.device_uuid = None
+        user.save(update_fields=["device_uuid"])
+        logger.info(
+            "Device UUID cleared for user '%s' after password reset. "
+            "Next login will re-issue a new device lock.",
+            user.username,
+        )
+
+
+# Connect to Django's built-in password_reset_complete signal
+try:
+    from django.contrib.auth.views import PasswordResetConfirmView
+    from django.contrib.auth.signals import user_logged_in as _  # noqa: just confirming import
+
+    # Django fires this signal when a password is successfully changed via PasswordResetConfirmView
+    from django.contrib.auth import update_session_auth_hash
+    from django.test.signals import setting_changed  # noqa
+except ImportError:
+    pass
+
+# The correct signal to hook into for password changes
+from django.contrib.auth.signals import user_logged_in  # already imported above
+
+# Django doesn't have a dedicated "password_reset_complete" signal,
+# so we listen to the HTTP POST on the confirm view by overriding the model's save.
+# A simpler, reliable approach: use a custom PasswordResetConfirmView override.
+

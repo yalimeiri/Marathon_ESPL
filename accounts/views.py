@@ -1,9 +1,11 @@
 from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView
 from django.contrib.auth import login
+from django.contrib.auth.views import PasswordResetConfirmView
 from django.core.mail import send_mail
 from django.conf import settings
 from .forms import CustomUserCreationForm
+
 
 class RegisterView(CreateView):
     """
@@ -45,3 +47,26 @@ class RegisterView(CreateView):
         # Call the parent class's form_valid to handle the redirect
         return super().form_valid(form)
 
+
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    """
+    Overrides the default password reset confirm view to clear the user's
+    device_uuid when they reset their password.
+    
+    WHY: Without this, a user on a second device could use "Forgot Password"
+    to reset their password and then log in from the second device. Since no
+    new device_uuid is assigned during the reset, the OLD device would lose
+    its cookie and be locked out too (because the uuid still matches).
+    
+    By clearing device_uuid, we force a clean re-bind: the FIRST device
+    to log in after the password reset wins the new lock. This is the most
+    fair and secure behavior.
+    """
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # Clear the device UUID so the next login re-issues a fresh one
+        user = form.user
+        if user.device_uuid:
+            user.device_uuid = None
+            user.save(update_fields=["device_uuid"])
+        return response
