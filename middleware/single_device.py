@@ -12,16 +12,20 @@ Flow
 LOGIN  (handled by accounts/signals.py + this middleware's process_response)
   1. User authenticates → `user_logged_in` signal fires.
   2. Signal generates a new UUID, saves it to user.device_uuid, and stores
-     the value in request._new_device_uuid.
+     the value in request._new_device_uuid (first-time) or
+     request._existing_device_uuid (returning user).
   3. process_response() detects _new_device_uuid and sets the signed cookie.
+  4. For returning users (_existing_device_uuid), we compare their *incoming*
+     cookie against the DB. If they differ, ths is a second device → block.
 
 EVERY SUBSEQUENT REQUEST  (process_request)
   1. Skip:  unauthenticated users — nothing to check.
   2. Bypass: staff/superuser accounts — admins are never locked out.
-  3. Read the signed cookie (DEVICE_COOKIE_NAME from settings).
-  4. If the cookie is missing → force logout, redirect to LOGIN_URL.
-  5. If cookie UUID ≠ user.device_uuid → force logout, redirect to LOGIN_URL.
-  6. Otherwise: let the request through normally.
+  3. Bypass: login and logout URLs (prevent redirect loops).
+  4. Read the signed cookie (DEVICE_COOKIE_NAME from settings).
+  5. If the cookie is missing → force logout, redirect to LOGIN_URL.
+  6. If cookie UUID ≠ user.device_uuid → force logout, redirect to LOGIN_URL.
+  7. Otherwise: let the request through normally.
 
 Admin exception
 ───────────────
@@ -67,148 +71,119 @@ class SingleDeviceLoginMiddleware:
         self.cookie_name = getattr(settings, "DEVICE_COOKIE_NAME", "device_token")
         self.cookie_age = getattr(settings, "DEVICE_COOKIE_AGE", 60 * 60 * 24 * 30)
 
-    # ── process_request ────────────────────────────────────────────────────
-
     def __call__(self, request: HttpRequest):
+        # --- PRE-VIEW: Block illegitimate current sessions ---
         forced_logout = self._check_device(request)
         if forced_logout:
-            return forced_logout  # Early redirect
+            return forced_logout
 
+        # --- Run the actual view ---
         response = self.get_response(request)
 
-        # ── INTERCEPT POST-LOGIN ────────────────────────────────────────────────
-        # If the user just authenticated (signals fired), we must check their 
-        # existing device lock BEFORE letting them proceed to the site.
+        # --- POST-VIEW: Handle fresh logins ---
+        # Case A: Brand new user/device — issued a fresh UUID this request cycle.
+        #         Set the cookie on the response so the browser stores it.
+        new_uuid = getattr(request, "_new_device_uuid", None)
+        if new_uuid:
+            self._set_cookie(response, new_uuid)
+            logger.info("Device cookie issued for user '%s'.", 
+                        getattr(request.user, "username", "?"))
+
+        # Case B: Returning user logging in — they already have a UUID in DB.
+        #         We already have their incoming cookie. If it matches the DB we let
+        #         them through. If not, we block them RIGHT NOW (after the login view
+        #         ran but before the browser follows the redirect).
         existing_uuid = getattr(request, "_existing_device_uuid", None)
         if existing_uuid and request.user.is_authenticated and not request.user.is_staff:
-            signed_token = request.COOKIES.get(self.cookie_name)
-            token_value = _unsign(signed_token) if signed_token else None
-            
-            if token_value != existing_uuid:
+            incoming_signed = request.COOKIES.get(self.cookie_name)
+            incoming_uuid = _unsign(incoming_signed) if incoming_signed else None
+
+            if incoming_uuid != existing_uuid:
                 logger.warning(
-                    "POST-LOGIN BLOCK: User '%s' tried logging in from a second device. "
-                    "Cookie=%s, DB=%s. Instant logout.", request.user.username, token_value, existing_uuid
+                    "POST-LOGIN BLOCK: user '%s' from unknown device "
+                    "(cookie=%s, db=%s).",
+                    request.user.username, incoming_uuid, existing_uuid,
                 )
                 return self._force_logout(request)
-        # ────────────────────────────────────────────────────────────────────────
-
-        # After the view runs: if this was a fresh *first-time* login, set the cookie.
-        self._maybe_set_cookie(request, response)
 
         return response
 
+    # ── Device Validation ──────────────────────────────────────────────────
+
     def _check_device(self, request: HttpRequest):
         """
-        Validate the device cookie against the DB.
-        Returns a redirect response on failure, None on success.
+        Validate the device cookie on every authenticated, non-exempt request.
+        Returns a redirect response on failure, None to continue normally.
         """
         user = request.user
 
-        # 1. Not logged in — nothing to check.
+        # Not logged in — nothing to check.
         if not user.is_authenticated:
             return None
 
-        # 2. Staff / superusers bypass the lock entirely.
+        # Staff / superusers bypass the lock entirely.
         if user.is_staff:
             return None
 
-        # 3. Handle login/logout URLs.
-        # We must exempt unauthenticated requests to login/logout to prevent infinite loops.
-        # However, if the user IS authenticated and hitting these, we should still check their
-        # device lock to prevent secondary devices from successfully completing a login cycle.
+        # Bypass auth-related URLs to prevent redirect loops.
         path = request.path_info
-        login_url = getattr(settings, "LOGIN_URL", "/accounts/login/")
+        login_url  = getattr(settings, "LOGIN_URL",  "/accounts/login/")
         logout_url = getattr(settings, "LOGOUT_URL", "/accounts/logout/")
-        
-        # If they are just logging out, let it pass so the cookie gets cleared
-        if path.startswith(logout_url):
+        register_url = "/accounts/register/"
+        if (path.startswith(login_url) or 
+            path.startswith(logout_url) or 
+            path.startswith(register_url)):
             return None
 
-        # 4. Read the signed cookie.
+        # Read and validate the signed cookie.
         signed_token = request.COOKIES.get(self.cookie_name)
 
         if not signed_token:
-            logger.warning(
-                "Device cookie missing for user '%s' — forcing logout.", user.username
-            )
+            logger.warning("Device cookie missing for '%s' — logging out.", user.username)
             return self._force_logout(request)
 
-        # 5. Verify the signature / expiry.
         token_value = _unsign(signed_token)
         if token_value is None:
-            logger.warning(
-                "Device cookie signature invalid for user '%s' — forcing logout.",
-                user.username,
-            )
+            logger.warning("Bad device cookie signature for '%s' — logging out.", user.username)
             return self._force_logout(request)
 
-        # 6. Compare with the DB value.
         db_uuid = str(user.device_uuid) if user.device_uuid else None
         if token_value != db_uuid:
             logger.info(
-                "Device UUID mismatch for user '%s' (cookie=%s, db=%s) "
-                "— session invalidated.",
-                user.username,
-                token_value,
-                db_uuid,
+                "Device mismatch for '%s' (cookie=%s, db=%s) — logging out.",
+                user.username, token_value, db_uuid,
             )
             return self._force_logout(request)
 
-        # 7. All good.
+        # All good.
         return None
 
     # ── Cookie management ──────────────────────────────────────────────────
 
-    def _maybe_set_cookie(self, request: HttpRequest, response):
-        """
-        If a fresh UUID was generated during this request cycle (login),
-        attach the signed cookie to the response.
-        """
-        new_uuid = getattr(request, "_new_device_uuid", None)
-        if new_uuid is None:
-            return
-
-        signed = _sign(new_uuid)
+    def _set_cookie(self, response, uuid_value: str):
+        signed = _sign(uuid_value)
         response.set_cookie(
             self.cookie_name,
             signed,
             max_age=self.cookie_age,
             httponly=True,
             samesite="Lax",
-            # secure=True  ← set automatically by Django when SECURE_SSL_REDIRECT
             secure=not settings.DEBUG,
-        )
-        logger.info(
-            "Device cookie issued for user '%s'.",
-            request.user.username if request.user.is_authenticated else "unknown",
         )
 
     # ── Helpers ────────────────────────────────────────────────────────────
 
     def _force_logout(self, request: HttpRequest):
-        """Log the user out, show a message, and redirect to the login page."""
-        was_authenticated = getattr(request, "user", None) and request.user.is_authenticated
-        
-        # Flush the session first so we don't lose the message in the reset
+        """Log the user out and redirect to login with a visible error."""
         logout(request)
-        
-        if was_authenticated:
-            # We add the message AFTER logout, so it gets saved to the newly created anonymous session
-            # and survives the redirect to the login page.
-            messages.error(
-                request, 
-                "Your account is locked to the original device/browser you registered with. "
-                "You cannot log in from this device."
-            )
-            
+
+        # Add error message AFTER logout so it survives into the new anonymous session.
+        messages.error(
+            request,
+            "Your account is linked to another device. "
+            "You cannot access it from this browser."
+        )
+
         login_url = getattr(settings, "LOGIN_URL", "/accounts/login/")
-        # Foolproof way to guarantee the message displays regardless of session quirks:
-        if "?" in login_url:
-            login_url += "&blocked=1"
-        else:
-            login_url += "?blocked=1"
-            
-        response = redirect(login_url)
-        # Also delete the stale cookie from the client.
-        response.delete_cookie(self.cookie_name)
-        return response
+        login_url += "?blocked=1"
+        return redirect(login_url)
