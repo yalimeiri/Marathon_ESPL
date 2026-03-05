@@ -12,8 +12,9 @@ urlpatterns = [
     # Django Admin
     path("admin/", admin.site.urls),
 
-    # Accounts (login / logout / password reset — Django built-ins)
+    # Accounts (login / logout / password reset — Django built-ins + custom register)
     path("accounts/", include("django.contrib.auth.urls")),
+    path("accounts/", include("accounts.urls", namespace="accounts")),
 
     # Courses (single include — avoids W005 duplicate namespace)
     path("courses/", include("courses.urls", namespace="courses")),

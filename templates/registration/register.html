@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Register — MarathonLMS{% endblock %}
+{% block content %}
+<div
+    style="max-width:400px;margin:60px auto;background:#1a1d27;padding:32px;border-radius:12px;border:1px solid #2d2f3e;">
+    <h1 style="margin-bottom:24px;color:#c7d2fe;font-size:1.5rem;">Create an Account</h1>
+    <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:24px;">
+        Join MarathonLMS to access all course videos.
+        <br><strong>Note:</strong> Your account will be securely locked to the first device you log in from.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div style="margin-bottom:16px;">
+            <label style="display:block;margin-bottom:6px;color:#94a3b8;font-size:.875rem;">{{ field.label }}</label>
+            <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                value="{{ field.value|default:'' }}" {% if field.field.required %}required{% endif %}
+                style="width:100%;padding:10px 14px;background:#0f1117;border:1px solid #2d2f3e;border-radius:8px;color:#e8e8e8;font-size:1rem;">
+            {% if field.help_text %}
+            <div style="color:#64748b; font-size:0.75rem; margin-top:4px;">{{ field.help_text|safe }}</div>
+            {% endif %}
+            {% for error in field.errors %}
+            <span style="color:#f87171;font-size:.8rem; display:block; margin-top:4px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;">Register</button>
+    </form>
+
+    <div style="margin-top:24px; text-align:center; font-size:0.9rem;">
+        <span style="color:#94a3b8;">Already have an account?</span>
+        <a href="{% url 'login' %}" style="color:#6366f1; text-decoration:none; font-weight:500; margin-left:4px;">Sign
+            In</a>
+    </div>
+</div>
+{% endblock %}

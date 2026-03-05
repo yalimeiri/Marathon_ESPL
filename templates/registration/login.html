@@ -19,5 +19,11 @@
         {% endfor %}
         <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;">Sign In</button>
     </form>
+
+    <div style="margin-top:24px; text-align:center; font-size:0.9rem;">
+        <span style="color:#94a3b8;">Don't have an account?</span>
+        <a href="{% url 'accounts:register' %}"
+            style="color:#6366f1; text-decoration:none; font-weight:500; margin-left:4px;">Register here</a>
+    </div>
 </div>
 {% endblock %}
