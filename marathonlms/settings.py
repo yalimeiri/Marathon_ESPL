@@ -65,8 +65,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "middleware.single_device.SingleDeviceLoginMiddleware",  # ← device-lock
     "django.contrib.messages.middleware.MessageMiddleware",
+    "middleware.single_device.SingleDeviceLoginMiddleware",  # ← device-lock
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
