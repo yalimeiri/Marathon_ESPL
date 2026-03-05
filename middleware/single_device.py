@@ -96,7 +96,14 @@ class SingleDeviceLoginMiddleware:
         if user.is_staff:
             return None
 
-        # 3. Read the signed cookie.
+        # 3. Bypass login/logout URLs to prevent infinite redirect loops when locked out.
+        path = request.path_info
+        login_url = getattr(settings, "LOGIN_URL", "/accounts/login/")
+        logout_url = getattr(settings, "LOGOUT_URL", "/accounts/logout/")
+        if path.startswith(login_url) or path.startswith(logout_url):
+            return None
+
+        # 4. Read the signed cookie.
         signed_token = request.COOKIES.get(self.cookie_name)
 
         if not signed_token:
@@ -105,7 +112,7 @@ class SingleDeviceLoginMiddleware:
             )
             return self._force_logout(request)
 
-        # 4. Verify the signature / expiry.
+        # 5. Verify the signature / expiry.
         token_value = _unsign(signed_token)
         if token_value is None:
             logger.warning(
@@ -114,7 +121,7 @@ class SingleDeviceLoginMiddleware:
             )
             return self._force_logout(request)
 
-        # 5. Compare with the DB value.
+        # 6. Compare with the DB value.
         db_uuid = str(user.device_uuid) if user.device_uuid else None
         if token_value != db_uuid:
             logger.info(
@@ -126,7 +133,7 @@ class SingleDeviceLoginMiddleware:
             )
             return self._force_logout(request)
 
-        # 6. All good.
+        # 7. All good.
         return None
 
     # ── Cookie management ──────────────────────────────────────────────────
