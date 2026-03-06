@@ -38,7 +38,8 @@
         {% endfor %}
         <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;">Sign In</button>
         <div style="margin-top:12px;text-align:right;">
-            <a href="{% url 'password_reset' %}" style="color:#64748b;text-decoration:none;font-size:0.8rem;">Forgot
+            <a href="{% url 'accounts:password_reset' %}"
+                style="color:#64748b;text-decoration:none;font-size:0.8rem;">Forgot
                 your password?</a>
         </div>
     </form>

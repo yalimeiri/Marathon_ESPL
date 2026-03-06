@@ -92,7 +92,7 @@ class CustomPasswordResetView(PasswordResetView):
             # Redirect back to the reset form with the error message
             from django.shortcuts import redirect
             from django.urls import reverse
-            return redirect(reverse("password_reset"))
+            return redirect(reverse("accounts:password_reset"))
 
         return super().form_valid(form)
 
