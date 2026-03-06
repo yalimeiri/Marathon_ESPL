@@ -1,21 +1,122 @@
 {% extends "base.html" %}
-{% block title %}{{ category.name }} — MarathonLMS{% endblock %}
+{% block title %}{{ category.name }} — THEFLYINGSQUIREL{% endblock %}
+{% block extra_head %}
+<style>
+    .page-header {
+        margin-bottom: 36px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--indigo);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 20px;
+        transition: gap .15s;
+    }
+
+    .back-link:hover {
+        gap: 10px;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: -0.3px;
+        margin-bottom: 6px;
+    }
+
+    .page-header p {
+        color: var(--text-muted);
+    }
+
+    .video-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .video-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px 22px;
+        text-decoration: none;
+        transition: border-color .2s, transform .15s, box-shadow .2s;
+    }
+
+    .video-row:hover {
+        border-color: var(--indigo);
+        transform: translateX(4px);
+        box-shadow: 0 4px 20px rgba(99, 102, 241, .1);
+    }
+
+    .video-play {
+        width: 40px;
+        height: 40px;
+        background: rgba(99, 102, 241, .15);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--indigo);
+        font-size: 1rem;
+        flex-shrink: 0;
+        transition: background .2s;
+    }
+
+    .video-row:hover .video-play {
+        background: var(--indigo);
+        color: #fff;
+    }
+
+    .video-title {
+        color: var(--text);
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .video-desc {
+        color: var(--text-muted);
+        font-size: 0.82rem;
+        margin-top: 2px;
+    }
+
+    .video-num {
+        margin-left: auto;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: var(--surface2);
+        padding: 3px 10px;
+        border-radius: 20px;
+        flex-shrink: 0;
+    }
+</style>
+{% endblock %}
 {% block content %}
-<div style="margin-bottom:24px;">
-    <a href="{% url 'courses:category-list' %}" style="color:#6366f1;text-decoration:none;">← All Courses</a>
+<div class="page-header">
+    <a href="{% url 'courses:category-list' %}" class="back-link">← All Courses</a>
+    <h1>{{ category.name }}</h1>
+    <p>{{ category.description }}</p>
 </div>
-<h1 style="font-size:1.8rem;color:#c7d2fe;margin-bottom:4px;">{{ category.name }}</h1>
-<p style="color:#64748b;margin-bottom:32px;">{{ category.description }}</p>
 
 {% if videos %}
-<div style="display:flex;flex-direction:column;gap:12px;">
+<div class="video-list">
     {% for video in videos %}
-    <a href="{% url 'courses:video-detail' video.pk %}"
-        style="display:flex;align-items:center;gap:16px;background:#1a1d27;border:1px solid #2d2f3e;border-radius:10px;padding:16px 20px;text-decoration:none;transition:border-color .2s;"
-        onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#2d2f3e'">
-        <span style="font-size:1.5rem;">▶️</span>
+    <a href="{% url 'courses:video-detail' video.pk %}" class="video-row">
+        <div class="video-play">▶</div>
         <div>
-            <div style="color:#e8e8e8;font-weight:600;">
+            <div class="video-title">
                 {{ video.title }}
                 <style>
                     .badge-pending {
@@ -59,14 +160,14 @@
                 {% endif %}
             </div>
             {% if video.description %}
-            <div style="color:#64748b;font-size:.85rem;margin-top:2px;">{{ video.description|truncatewords:15 }}</div>
+            <div class="video-desc">{{ video.description|truncatewords:15 }}</div>
             {% endif %}
         </div>
-        <span style="margin-left:auto;color:#6366f1;font-size:.85rem;">#{{ video.order }}</span>
+        <span class="video-num">#{{ video.order }}</span>
     </a>
     {% endfor %}
 </div>
 {% else %}
-<p style="color:#64748b;">No published videos in this category yet.</p>
+<p style="color:var(--text-muted);padding:40px 0;">No published videos in this category yet.</p>
 {% endif %}
 {% endblock %}

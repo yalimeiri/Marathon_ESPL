@@ -3,8 +3,19 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser
 
 class CustomUserCreationForm(UserCreationForm):
+    email = forms.EmailField(
+        required=True,
+        help_text="Required. Enter a valid email address for password recovery.",
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+    )
+
     class Meta(UserCreationForm.Meta):
         model = CustomUser
-        # We only need the username and password fields which are included by default in UserCreationForm,
-        # but we explicitly define the fields here for clarity.
-        fields = ('username',)
+        fields = ('username', 'email', 'password1', 'password2')
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data["email"]
+        if commit:
+            user.save()
+        return user

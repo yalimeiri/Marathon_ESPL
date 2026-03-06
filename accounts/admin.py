@@ -33,10 +33,23 @@ def reset_device_lock(modeladmin, request, queryset):
     )
 
 
+@admin.action(description="🗑️ Delete selected users")
+def delete_selected_users(modeladmin, request, queryset):
+    """Deletes the selected users permanently."""
+    count = queryset.count()
+    queryset.delete()
+    modeladmin.message_user(
+        request,
+        f"{count} user(s) deleted successfully.",
+    )
+
+
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    actions = [reset_device_lock]
+    actions = [reset_device_lock, delete_selected_users]
     inlines = [CategoryAccessInline]
+    # Show delete link on the individual user detail page
+    show_full_result_count = True
 
     # Add device_uuid to the detail view (read-only — managed by the system)
     readonly_fields = UserAdmin.readonly_fields + ("device_uuid",)

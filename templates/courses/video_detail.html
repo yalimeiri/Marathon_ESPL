@@ -59,8 +59,7 @@
         {% with url=video.cloudinary_url|default_if_none:"" %}
         {% if "youtube.com" not in url and "youtu.be" not in url and "drive.google.com" not in url %}
         <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:12px;" id="zoom-hint-text">
-            💡 <strong>Pro Tip:</strong> Hover over the video to use the Zoom controls or scroll with your mouse. Drag
-            to pan around.
+            💡 <strong>לתשומת ליבכם:</strong> ניתן להגדיל ולהקטין את התמונה בעזרת העכבר 🖱️
         </p>
         {% endif %}
         {% endwith %}
@@ -170,6 +169,22 @@
                         style="background:#0ea5e9; color:white; border:none; padding:0 12px; height:36px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; margin-left:8px;">⛶
                         Fullscreen</button>
                 </div>
+
+                {% if next_video_url %}
+                <!-- Autoplay Countdown Overlay -->
+                <div id="autoplay-toast"
+                    style="display:none; position:absolute; bottom:80px; right:20px; z-index:30; background:rgba(15, 23, 42, 0.85); padding:12px 16px; border-radius:8px; backdrop-filter:blur(4px); border:1px solid #334155; align-items:center; gap:16px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+                    <div>
+                        <div
+                            style="color:#cbd5e1; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+                            Up Next</div>
+                        <div style="color:white; font-weight:600; font-size:0.95rem;">Playing in <span
+                                id="autoplay-countdown">5</span>s...</div>
+                    </div>
+                    <button id="btn-cancel-autoplay"
+                        style="background:#475569; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem; transition:background 0.2s;">Cancel</button>
+                </div>
+                {% endif %}
             </div>
 
             <style>
@@ -209,11 +224,20 @@
 
     <!-- RIGHT: Sidebar Playlist -->
     <div
-        style="background:#1e293b; border-radius:12px; padding:16px; position:sticky; top:24px; max-height:85vh; overflow-y:auto;">
-        <h3
-            style="color:#94a3b8; font-size:1.1rem; margin-top:0; margin-bottom:16px; border-bottom:1px solid #334155; padding-bottom:12px;">
-            Course Content
-        </h3>
+        style="background:#1e293b; border-radius:12px; padding:16px; position:sticky; top:24px; max-height:85vh; overflow-y:auto; display:flex; flex-direction:column;">
+        <div
+            style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:12px; margin-bottom:16px;">
+            <h3 style="color:#94a3b8; font-size:1.1rem; margin:0;">
+                Course Content
+            </h3>
+            <label
+                style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#cbd5e1; font-size:0.85rem; font-weight:500;"
+                title="Play next video automatically">
+                <input type="checkbox" id="autoplay-toggle" checked
+                    style="accent-color:#6366f1; width:16px; height:16px; cursor:pointer;">
+                Autoplay
+            </label>
+        </div>
         <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;">
             {% for item in playlist %}
             <li>
@@ -246,18 +270,66 @@
     </div>
 </div>
 
-{% if next_video_url %}
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        const autoplayToggle = document.getElementById("autoplay-toggle");
         const videoElement = document.getElementById("main-video-player");
+        const autoplayToast = document.getElementById("autoplay-toast");
+        const countdownElement = document.getElementById("autoplay-countdown");
+        const btnCancelAutoplay = document.getElementById("btn-cancel-autoplay");
+
+        let autoplayCancelledThisSession = false;
+
+        // Load saved preference
+        if (autoplayToggle) {
+            if (localStorage.getItem("autoplay") === "false") {
+                autoplayToggle.checked = false;
+            }
+            autoplayToggle.addEventListener("change", (e) => {
+                localStorage.setItem("autoplay", e.target.checked);
+                if (!e.target.checked && autoplayToast) {
+                    autoplayToast.style.display = "none";
+                }
+            });
+        }
+
+        {% if next_video_url %}
+        if (btnCancelAutoplay) {
+            btnCancelAutoplay.addEventListener("click", () => {
+                autoplayCancelledThisSession = true;
+                if (autoplayToast) autoplayToast.style.display = "none";
+            });
+        }
+
         if (videoElement) {
+            videoElement.addEventListener("timeupdate", function () {
+                if (autoplayToggle && !autoplayToggle.checked) return;
+                if (autoplayCancelledThisSession) return;
+
+                // Show countdown in the last 5 seconds
+                const timeLeft = videoElement.duration - videoElement.currentTime;
+                if (timeLeft <= 5.5 && timeLeft > 0) {
+                    if (autoplayToast && autoplayToast.style.display !== "flex") {
+                        autoplayToast.style.display = "flex";
+                    }
+                    if (countdownElement) {
+                        countdownElement.textContent = Math.ceil(timeLeft);
+                    }
+                } else if (autoplayToast) {
+                    autoplayToast.style.display = "none";
+                }
+            });
+
             videoElement.addEventListener("ended", function () {
+                if (autoplayToggle && !autoplayToggle.checked) return;
+                if (autoplayCancelledThisSession) return;
+
                 window.location.href = "{{ next_video_url }}";
             });
         }
+        {% endif %}
     });
 </script>
-{% endif %}
 
 <!-- Zoom & Pan Script -->
 <script>
@@ -315,30 +387,43 @@
             }
 
             // Custom Fullscreen Handler
-            if (btnFullscreen) {
-                btnFullscreen.addEventListener("click", () => {
-                    if (!document.fullscreenElement) {
-                        if (videoZoomContainer.requestFullscreen) {
-                            videoZoomContainer.requestFullscreen();
-                        } else if (videoZoomContainer.webkitRequestFullscreen) { /* Safari */
-                            videoZoomContainer.webkitRequestFullscreen();
-                        } else if (videoZoomContainer.msRequestFullscreen) { /* IE11 */
-                            videoZoomContainer.msRequestFullscreen();
-                        }
-                    } else {
-                        if (document.exitFullscreen) {
-                            document.exitFullscreen();
-                        } else if (document.webkitExitFullscreen) { /* Safari */
-                            document.webkitExitFullscreen();
-                        } else if (document.msExitFullscreen) { /* IE11 */
-                            document.msExitFullscreen();
-                        }
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    if (videoZoomContainer.requestFullscreen) {
+                        videoZoomContainer.requestFullscreen();
+                    } else if (videoZoomContainer.webkitRequestFullscreen) { /* Safari */
+                        videoZoomContainer.webkitRequestFullscreen();
+                    } else if (videoZoomContainer.msRequestFullscreen) { /* IE11 */
+                        videoZoomContainer.msRequestFullscreen();
                     }
-                });
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) { /* Safari */
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) { /* IE11 */
+                        document.msExitFullscreen();
+                    }
+                }
             }
 
+            if (btnFullscreen) {
+                btnFullscreen.addEventListener("click", toggleFullscreen);
+            }
+
+            // Double click to toggle fullscreen
+            dragOverlay.addEventListener("dblclick", (e) => {
+                e.preventDefault();
+                toggleFullscreen();
+            });
+
             // Dragging Logic
+            let clickStartX = 0, clickStartY = 0;
+
             dragOverlay.addEventListener("mousedown", (e) => {
+                clickStartX = e.clientX;
+                clickStartY = e.clientY;
+
                 // Only allow dragging if zoomed in
                 if (currentScale > 1) {
                     isDragging = true;
@@ -361,10 +446,28 @@
                 videoZoomWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
             });
 
+            dragOverlay.addEventListener("mouseup", (e) => {
+                // Distinguish between a drag and a simple click
+                const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
+
+                // If it's a simple click (not a drag), toggle play/pause
+                if (dist < 5) {
+                    const videoElement = document.getElementById("main-video-player");
+                    if (videoElement) {
+                        if (videoElement.paused || videoElement.ended) {
+                            videoElement.play();
+                        } else {
+                            videoElement.pause();
+                        }
+                    }
+                }
+            });
+
             window.addEventListener("mouseup", () => {
                 if (isDragging) {
                     isDragging = false;
-                    dragOverlay.style.cursor = "grab";
+                    // Restore cursor appropriately
+                    dragOverlay.style.cursor = currentScale > 1 ? "grab" : "default";
                     // Restore smooth transition for the buttons
                     videoZoomWrapper.style.transition = "transform 0.2s ease-out";
                 }

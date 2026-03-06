@@ -1,48 +1,170 @@
 {% extends "base.html" %}
-{% block title %}Login — MarathonLMS{% endblock %}
-{% block content %}
-<div
-    style="max-width:400px;margin:60px auto;background:#1a1d27;padding:32px;border-radius:12px;border:1px solid #2d2f3e;">
-    <h1 style="margin-bottom:24px;color:#c7d2fe;font-size:1.5rem;">Sign In to MarathonLMS</h1>
+{% block title %}Sign In — TheFlyingSquirrel{% endblock %}
+{% block extra_head %}
+<style>
+    body {
+        background: radial-gradient(ellipse at 60% 0%, rgba(99, 102, 241, .12) 0%, transparent 60%), var(--bg);
+    }
 
-    {% if messages or request.GET.blocked %}
-    <div style="margin-bottom:24px;">
+    .auth-wrap {
+        min-height: calc(100vh - 62px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 16px;
+        margin-top: -48px;
+    }
+
+    .auth-card {
+        width: 100%;
+        max-width: 420px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 40px 36px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, .4);
+    }
+
+    .auth-card h1 {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--text);
+        margin-bottom: 6px;
+        letter-spacing: -0.3px;
+    }
+
+    .auth-card .subtitle {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 28px;
+    }
+
+    .field {
+        margin-bottom: 18px;
+    }
+
+    .field label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--text-muted);
+        font-size: 0.825rem;
+        font-weight: 500;
+    }
+
+    .field-error {
+        color: #f87171;
+        font-size: 0.78rem;
+        margin-top: 4px;
+        display: block;
+    }
+
+    .alert-error {
+        background: rgba(248, 113, 113, .08);
+        border: 1px solid rgba(248, 113, 113, .3);
+        border-left: 3px solid #f87171;
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin-bottom: 20px;
+        color: #fca5a5;
+        font-size: 0.875rem;
+    }
+
+    .forgot-link {
+        display: block;
+        text-align: right;
+        margin-top: 8px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.78rem;
+        transition: color .15s;
+    }
+
+    .forgot-link:hover {
+        color: var(--indigo-lt);
+    }
+
+    .divider {
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.82rem;
+        margin: 22px 0;
+        position: relative;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: 42%;
+        height: 1px;
+        background: var(--border);
+    }
+
+    .divider::before {
+        left: 0;
+    }
+
+    .divider::after {
+        right: 0;
+    }
+
+    .register-link {
+        display: block;
+        text-align: center;
+        color: var(--indigo-lt);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        transition: border-color .15s, background .15s;
+    }
+
+    .register-link:hover {
+        border-color: var(--indigo);
+        background: rgba(99, 102, 241, .06);
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h1>Welcome back!</h1>
+        <p class="subtitle">Sign in to your TheFlyingSquirrel account</p>
+
         {% if request.GET.blocked %}
-        <div
-            style="padding:12px 16px; border-radius:8px; font-size:0.9rem; margin-bottom:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#fca5a5;">
-            Your account is locked to the original device/browser you registered with. You cannot log in from this
-            device.
+        <div class="alert-error">
+            🔒 This account is locked to another device. Please use your original device to log in.
         </div>
         {% endif %}
-        {% for message in messages %}
-        <div
-            style="padding:12px 16px; border-radius:8px; font-size:0.9rem; margin-bottom:8px; {% if message.tags == 'error' %}background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#fca5a5;{% else %}background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); color:#93c5fd;{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 
-    <form method="post">
-        {% csrf_token %}
-        {% for field in form %}
-        <div style="margin-bottom:16px;">
-            <label style="display:block;margin-bottom:6px;color:#94a3b8;font-size:.875rem;">{{ field.label }}</label>
-            <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
-                value="{{ field.value|default:'' }}" {% if field.field.required %}required{% endif %}
-                style="width:100%;padding:10px 14px;background:#0f1117;border:1px solid #2d2f3e;border-radius:8px;color:#e8e8e8;font-size:1rem;">
-            {% for error in field.errors %}
-            <span style="color:#f87171;font-size:.8rem;">{{ error }}</span>
+        <!-- {% if form.non_field_errors %}
+        <div class="alert-error">{{ form.non_field_errors }}</div>
+        {% endif %} -->
+
+        <form method="post">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="field">
+                <label>{{ field.label }}</label>
+                <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}"
+                    id="{{ field.id_for_label }}" {% if field.value %}value="{{ field.value }}" {% endif %}
+                    autocomplete="{{ field.html_name }}">
+                {% for error in field.errors %}
+                <span class="field-error">{{ error }}</span>
+                {% endfor %}
+            </div>
             {% endfor %}
-        </div>
-        {% endfor %}
-        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;">Sign In</button>
-    </form>
 
-    <div style="margin-top:24px; text-align:center; font-size:0.9rem;">
-        <span style="color:#94a3b8;">Don't have an account?</span>
-        <a href="{% url 'accounts:register' %}"
-            style="color:#6366f1; text-decoration:none; font-weight:500; margin-left:4px;">Register here</a>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px;">Sign
+                In</button>
+            <a href="{% url 'accounts:password_reset' %}" class="forgot-link">Forgot your password?</a>
+        </form>
+
+        <div class="divider">or</div>
+        <a href="{% url 'accounts:register' %}" class="register-link">Create a new account →</a>
     </div>
 </div>
 {% endblock %}
