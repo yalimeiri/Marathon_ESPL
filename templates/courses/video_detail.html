@@ -266,27 +266,35 @@
             }
 
             // Custom Fullscreen Handler
-            if (btnFullscreen) {
-                btnFullscreen.addEventListener("click", () => {
-                    if (!document.fullscreenElement) {
-                        if (videoZoomContainer.requestFullscreen) {
-                            videoZoomContainer.requestFullscreen();
-                        } else if (videoZoomContainer.webkitRequestFullscreen) { /* Safari */
-                            videoZoomContainer.webkitRequestFullscreen();
-                        } else if (videoZoomContainer.msRequestFullscreen) { /* IE11 */
-                            videoZoomContainer.msRequestFullscreen();
-                        }
-                    } else {
-                        if (document.exitFullscreen) {
-                            document.exitFullscreen();
-                        } else if (document.webkitExitFullscreen) { /* Safari */
-                            document.webkitExitFullscreen();
-                        } else if (document.msExitFullscreen) { /* IE11 */
-                            document.msExitFullscreen();
-                        }
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    if (videoZoomContainer.requestFullscreen) {
+                        videoZoomContainer.requestFullscreen();
+                    } else if (videoZoomContainer.webkitRequestFullscreen) { /* Safari */
+                        videoZoomContainer.webkitRequestFullscreen();
+                    } else if (videoZoomContainer.msRequestFullscreen) { /* IE11 */
+                        videoZoomContainer.msRequestFullscreen();
                     }
-                });
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) { /* Safari */
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) { /* IE11 */
+                        document.msExitFullscreen();
+                    }
+                }
             }
+
+            if (btnFullscreen) {
+                btnFullscreen.addEventListener("click", toggleFullscreen);
+            }
+
+            // Double click to toggle fullscreen
+            dragOverlay.addEventListener("dblclick", (e) => {
+                e.preventDefault();
+                toggleFullscreen();
+            });
 
             // Dragging Logic
             let clickStartX = 0, clickStartY = 0;
