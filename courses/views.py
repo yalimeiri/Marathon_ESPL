@@ -80,7 +80,16 @@ class VideoListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["category"] = self.category
-        ctx["user_access_level"] = get_effective_access_level(self.request.user, self.category)
+        
+        user_level = get_effective_access_level(self.request.user, self.category)
+        ctx["user_access_level"] = user_level
+        
+        # Attach boolean flags to avoid `==` in templates (due to aggressive auto-formatter breaking tags)
+        for video in ctx["videos"]:
+            video.is_pending = (user_level < video.minimum_access_level) and (user_level == AccessTier.PENDING) and (video.minimum_access_level == AccessTier.PURCHASED)
+            video.is_premium = (user_level < video.minimum_access_level) and not video.is_pending
+            video.is_free_preview = (user_level >= video.minimum_access_level) and (video.minimum_access_level == AccessTier.VISITING)
+            
         return ctx
 
 
@@ -124,8 +133,16 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
         else:
             playlist = Video.objects.filter(category=video.category, is_published=True).order_by("order", "title")
             
+        user_level = get_effective_access_level(self.request.user, video.category)
+        
+        # Attach boolean flags to avoid `==` in templates (due to aggressive auto-formatter breaking tags)
+        for item in playlist:
+            item.is_pending = (user_level < item.minimum_access_level) and (user_level == AccessTier.PENDING) and (item.minimum_access_level == AccessTier.PURCHASED)
+            item.is_premium = (user_level < item.minimum_access_level) and not item.is_pending
+            item.is_free_preview = (user_level >= item.minimum_access_level) and (item.minimum_access_level == AccessTier.VISITING)
+            
         context['playlist'] = playlist
-        context['user_access_level'] = get_effective_access_level(self.request.user, video.category)
+        context['user_access_level'] = user_level
         
         # Find the next video in the list
         playlist_list = list(playlist)

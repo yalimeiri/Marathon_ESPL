@@ -48,14 +48,13 @@
                         white-space: nowrap;
                     }
                 </style>
-                {% if user_access_level < video.minimum_access_level %} {% if user_access_level==1 and
-                    video.minimum_access_level==2 %} <span class="badge-pending">⏳ Pending</span>
-                    {% else %}
-                    <span class="badge-premium">🔒 Premium</span>
-                    {% endif %}
-                    {% elif video.minimum_access_level == 0 %}
-                    <span class="badge-free">🔓 Free Preview</span>
-                    {% endif %}
+                {% if video.is_pending %}
+                <span class="badge-pending">⏳ Pending</span>
+                {% elif video.is_premium %}
+                <span class="badge-premium">🔒 Premium</span>
+                {% elif video.is_free_preview %}
+                <span class="badge-free">🔓 Free Preview</span>
+                {% endif %}
             </div>
             {% if video.description %}
             <div style="color:#64748b;font-size:.85rem;margin-top:2px;">{{ video.description|truncatewords:15 }}</div>
