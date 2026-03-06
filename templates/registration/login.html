@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Sign In — THEFLYINGSQUIREL{% endblock %}
+{% block title %}Sign In — TheFlyingSquirrel{% endblock %}
 {% block extra_head %}
 <style>
     body {
@@ -131,8 +131,8 @@
 {% block content %}
 <div class="auth-wrap">
     <div class="auth-card">
-        <h1>Welcome back 👋</h1>
-        <p class="subtitle">Sign in to your THEFLYINGSQUIREL account</p>
+        <h1>Welcome back!</h1>
+        <p class="subtitle">Sign in to your TheFlyingSquirrel account</p>
 
         {% if request.GET.blocked %}
         <div class="alert-error">
@@ -140,9 +140,9 @@
         </div>
         {% endif %}
 
-        {% if form.non_field_errors %}
+        <!-- {% if form.non_field_errors %}
         <div class="alert-error">{{ form.non_field_errors }}</div>
-        {% endif %}
+        {% endif %} -->
 
         <form method="post">
             {% csrf_token %}
