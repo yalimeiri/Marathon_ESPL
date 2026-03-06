@@ -59,8 +59,7 @@
         {% with url=video.cloudinary_url|default_if_none:"" %}
         {% if "youtube.com" not in url and "youtu.be" not in url and "drive.google.com" not in url %}
         <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:12px;" id="zoom-hint-text">
-            💡 <strong>Pro Tip:</strong> Hover over the video to use the Zoom controls or scroll with your mouse. Drag
-            to pan around.
+            💡 <strong>לתשומת ליבכם:</strong> ניתן להגדיל ולהקטין את התמונה בעזרת העכבר 🖱️
         </p>
         {% endif %}
         {% endwith %}
