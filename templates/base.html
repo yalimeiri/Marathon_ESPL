@@ -1,11 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load static %}
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}MarathonLMS{% endblock %}</title>
+    <title>{% block title %}THEFLYINGSQUIREL{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <style>
+        :root {
+            --bg: #0b0d14;
+            --surface: #13151f;
+            --surface2: #1a1d2b;
+            --border: #252838;
+            --indigo: #6366f1;
+            --indigo-h: #4f52d8;
+            --indigo-lt: #a5b4fc;
+            --text: #e2e4f0;
+            --text-muted: #64748b;
+            --radius: 12px;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -13,109 +31,215 @@
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: #0f1117;
-            color: #e8e8e8;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
+            line-height: 1.6;
         }
 
+        /* ── Navbar ── */
         nav {
-            background: #1a1d27;
-            padding: 14px 32px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(13, 15, 22, 0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 62px;
             display: flex;
             align-items: center;
-            gap: 24px;
-            border-bottom: 1px solid #2d2f3e;
+            gap: 8px;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            margin-right: auto;
+        }
+
+        .nav-brand img {
+            height: 36px;
+            width: auto;
         }
 
         nav a {
-            color: #7c8cf8;
+            color: var(--text-muted);
             text-decoration: none;
+            font-size: 0.875rem;
             font-weight: 500;
+            padding: 6px 14px;
+            border-radius: 8px;
+            transition: color .15s, background .15s;
         }
 
         nav a:hover {
-            color: #a5b4fc;
+            color: var(--text);
+            background: var(--surface2);
         }
 
         .nav-logout-btn {
             background: none;
-            border: none;
-            color: #7c8cf8;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
             font-weight: 500;
             cursor: pointer;
-            font-size: 1rem;
-            padding: 0;
+            font-size: 0.875rem;
+            padding: 6px 14px;
+            border-radius: 8px;
             font-family: inherit;
+            transition: color .15s, background .15s, border-color .15s;
         }
 
         .nav-logout-btn:hover {
-            color: #a5b4fc;
+            color: var(--text);
+            background: var(--surface2);
+            border-color: var(--indigo);
         }
 
-        .nav-brand {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #c7d2fe;
-            margin-right: auto;
-        }
-
+        /* ── Main content ── */
         main {
-            max-width: 1100px;
-            margin: 40px auto;
+            max-width: 1120px;
+            margin: 48px auto;
             padding: 0 24px;
+            animation: fadeUp .35s ease both;
         }
 
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── Messages ── */
         .messages {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .messages li {
             list-style: none;
-            padding: 10px 16px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            background: #2a2f4a;
-            border-left: 3px solid #7c8cf8;
+            padding: 12px 18px;
+            border-radius: 8px;
+            background: var(--surface2);
+            border-left: 3px solid var(--indigo);
+            font-size: 0.9rem;
         }
 
+        .messages li.error {
+            border-left-color: #f87171;
+            background: rgba(248, 113, 113, .08);
+        }
+
+        /* ── Buttons ── */
         .btn {
-            display: inline-block;
-            padding: 10px 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 22px;
             border-radius: 8px;
             font-weight: 600;
+            font-size: 0.9rem;
             cursor: pointer;
             text-decoration: none;
             border: none;
+            transition: transform .15s, box-shadow .15s, background .15s;
+            font-family: inherit;
         }
 
         .btn-primary {
-            background: #6366f1;
+            background: var(--indigo);
             color: #fff;
+            box-shadow: 0 4px 18px rgba(99, 102, 241, .28);
         }
 
         .btn-primary:hover {
-            background: #4f46e5;
+            background: var(--indigo-h);
+            box-shadow: 0 6px 24px rgba(99, 102, 241, .4);
+            transform: translateY(-1px);
+        }
+
+        /* ── Card ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px 32px;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .card:hover {
+            border-color: var(--indigo);
+            box-shadow: 0 0 0 1px var(--indigo), 0 8px 32px rgba(99, 102, 241, .12);
+        }
+
+        /* ── Inputs ── */
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.95rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        input:focus {
+            border-color: var(--indigo);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, .18);
+        }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 32px 0 24px;
+            border-top: 1px solid var(--border);
+            margin-top: 80px;
         }
     </style>
+    {% block extra_head %}{% endblock %}
 </head>
 
 <body>
     <nav>
-        <span class="nav-brand">🎓 MarathonLMS</span>
+        <a href="/" class="nav-brand">
+            <img src="{% static 'logo.png' %}" alt="THEFLYINGSQUIREL">
+        </a>
         {% if user.is_authenticated %}
         <a href="{% url 'courses:category-list' %}">Courses</a>
         {% if user.is_staff %}
         <a href="{% url 'admin:index' %}">Admin</a>
         {% endif %}
-        <form method="post" action="{% url 'logout' %}" style="display:inline; margin:0; padding:0;">
+        <form method="post" action="{% url 'logout' %}" style="display:inline;margin:0;padding:0;">
             {% csrf_token %}
-            <button type="submit" class="nav-logout-btn">Logout ({{ user.username }})</button>
+            <button type="submit" class="nav-logout-btn">Logout · {{ user.username }}</button>
         </form>
         {% else %}
         <a href="{% url 'login' %}">Login</a>
+        <a href="{% url 'accounts:register' %}"
+            style="color:#fff;background:var(--indigo);padding:6px 16px;border-radius:8px;">Sign up</a>
         {% endif %}
     </nav>
+
     <main>
         {% if messages %}
         <ul class="messages">
@@ -126,6 +250,10 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
+
+    <footer>
+        © 2025 THEFLYINGSQUIREL · All rights reserved
+    </footer>
 </body>
 
 </html>
