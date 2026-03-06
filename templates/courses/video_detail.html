@@ -289,7 +289,12 @@
             }
 
             // Dragging Logic
+            let clickStartX = 0, clickStartY = 0;
+
             dragOverlay.addEventListener("mousedown", (e) => {
+                clickStartX = e.clientX;
+                clickStartY = e.clientY;
+
                 // Only allow dragging if zoomed in
                 if (currentScale > 1) {
                     isDragging = true;
@@ -312,10 +317,28 @@
                 videoZoomWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
             });
 
+            dragOverlay.addEventListener("mouseup", (e) => {
+                // Distinguish between a drag and a simple click
+                const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
+
+                // If it's a simple click (not a drag), toggle play/pause
+                if (dist < 5) {
+                    const videoElement = document.getElementById("main-video-player");
+                    if (videoElement) {
+                        if (videoElement.paused || videoElement.ended) {
+                            videoElement.play();
+                        } else {
+                            videoElement.pause();
+                        }
+                    }
+                }
+            });
+
             window.addEventListener("mouseup", () => {
                 if (isDragging) {
                     isDragging = false;
-                    dragOverlay.style.cursor = "grab";
+                    // Restore cursor appropriately
+                    dragOverlay.style.cursor = currentScale > 1 ? "grab" : "default";
                     // Restore smooth transition for the buttons
                     videoZoomWrapper.style.transition = "transform 0.2s ease-out";
                 }
