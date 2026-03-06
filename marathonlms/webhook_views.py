@@ -2,7 +2,9 @@ import json
 import requests
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from courses.models import Purchase
+from django.utils import timezone
+from datetime import timedelta
+from courses.models import Purchase, CategoryAccess, AccessTier
 
 @csrf_exempt
 def telegram_webhook(request):
@@ -30,6 +32,15 @@ def telegram_webhook(request):
                     new_status = 'APPROVED' if action == 'approve' else 'REJECTED'
                     purchase.status = new_status
                     purchase.save()
+                    
+                    if new_status == 'APPROVED':
+                        access, _ = CategoryAccess.objects.get_or_create(
+                            user=purchase.user, 
+                            category=purchase.category
+                        )
+                        access.access_level = AccessTier.PURCHASED
+                        access.expires_at = timezone.now() + timedelta(days=120)  # 4 months
+                        access.save()
                     
                     # Update message to remove buttons and show status
                     bot_token = '8227368106:AAEbSmIdTFRwy1QUoiuGMJGo8SM_Nfh5-BA'

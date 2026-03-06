@@ -14,6 +14,12 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 
 from .models import CustomUser
+from courses.models import CategoryAccess
+
+class CategoryAccessInline(admin.TabularInline):
+    model = CategoryAccess
+    extra = 1
+    fields = ('category', 'access_level', 'expires_at')
 
 
 @admin.action(description="🔓 Reset device lock (clear device UUID)")
@@ -30,6 +36,7 @@ def reset_device_lock(modeladmin, request, queryset):
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     actions = [reset_device_lock]
+    inlines = [CategoryAccessInline]
 
     # Add device_uuid to the detail view (read-only — managed by the system)
     readonly_fields = UserAdmin.readonly_fields + ("device_uuid",)

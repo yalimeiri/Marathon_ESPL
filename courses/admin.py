@@ -12,8 +12,11 @@ Video Admin features:
 
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Q
 
-from .models import Category, Video, Purchase
+from .models import Category, Video, Purchase, CategoryAccess
 
 
 @admin.register(Purchase)
@@ -23,6 +26,44 @@ class PurchaseAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'phone_number', 'payer_name')
     readonly_fields = ('created_at', 'updated_at')
 
+
+class IsExpiredFilter(admin.SimpleListFilter):
+    title = 'Is Expired'
+    parameter_name = 'is_expired'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('yes', 'Yes'),
+            ('no', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'yes':
+            return queryset.filter(expires_at__lte=timezone.now())
+        if self.value() == 'no':
+            return queryset.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
+
+@admin.action(description="Extend access by 30 days")
+def extend_access_30_days(modeladmin, request, queryset):
+    for obj in queryset:
+        if obj.expires_at:
+            obj.expires_at += timedelta(days=30)
+        else:
+            obj.expires_at = timezone.now() + timedelta(days=30)
+        obj.save()
+
+@admin.register(CategoryAccess)
+class CategoryAccessAdmin(admin.ModelAdmin):
+    list_display = ('user', 'category', 'access_level', 'expires_at', 'is_expired')
+    list_filter = ('access_level', 'category', IsExpiredFilter)
+    search_fields = ('user__username', 'category__name')
+    actions = [extend_access_30_days]
+    
+    @admin.display(boolean=True, ordering='expires_at', description='Expired')
+    def is_expired(self, obj):
+        if obj.expires_at:
+            return obj.expires_at <= timezone.now()
+        return False
 
 
 class VideoInline(admin.TabularInline):
@@ -64,19 +105,20 @@ class VideoAdmin(admin.ModelAdmin):
         "title",
         "category",
         "order",
+        "minimum_access_level",
         "is_published",
         "file_link",
         "created_at",
     )
     list_display_links = ("title",)
-    list_editable = ("order", "is_published")
-    list_filter = ("category", "is_published")
+    list_editable = ("order", "minimum_access_level", "is_published")
+    list_filter = ("category", "minimum_access_level", "is_published")
     search_fields = ("title", "description")
     ordering = ("category", "order")
 
     fieldsets = (
         (None, {
-            "fields": ("title", "category", "order", "is_published"),
+            "fields": ("title", "category", "order", "minimum_access_level", "is_published"),
         }),
         ("Content", {
             "fields": ("file", "cloudinary_url", "public_id", "description"),

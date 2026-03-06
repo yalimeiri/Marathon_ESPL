@@ -15,7 +15,23 @@
         onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#2d2f3e'">
         <span style="font-size:1.5rem;">▶️</span>
         <div>
-            <div style="color:#e8e8e8;font-weight:600;">{{ video.title }}</div>
+            <div style="color:#e8e8e8;font-weight:600;">
+                {{ video.title }}
+                {% if user_access_level < video.minimum_access_level %} {% if user_access_level==1 and
+                    video.minimum_access_level==2 %} <span
+                    style="font-size:0.75rem; margin-left:8px; padding:2px 6px; border-radius:4px; background:#475569; color:#cbd5e1; white-space:nowrap;">
+                    ⏳ Pending</span>
+                    {% else %}
+                    <span
+                        style="font-size:0.75rem; margin-left:8px; padding:2px 6px; border-radius:4px; background:#334155; color:#94a3b8; white-space:nowrap;">🔒
+                        Premium</span>
+                    {% endif %}
+                    {% elif video.minimum_access_level == 0 %}
+                    <span
+                        style="font-size:0.75rem; margin-left:8px; padding:2px 6px; border-radius:4px; background:#059669; color:#d1fae5; white-space:nowrap;">🔓
+                        Free Preview</span>
+                    {% endif %}
+            </div>
             {% if video.description %}
             <div style="color:#64748b;font-size:.85rem;margin-top:2px;">{{ video.description|truncatewords:15 }}</div>
             {% endif %}

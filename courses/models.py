@@ -14,6 +14,11 @@ activated in settings.py.
 from django.db import models
 from django.conf import settings
 
+class AccessTier(models.IntegerChoices):
+    VISITING = 0, 'Visiting'
+    PENDING = 1, 'Pending'
+    PURCHASED = 2, 'Purchased'
+
 class Purchase(models.Model):
     STATUS_CHOICES = (
         ('PENDING', 'Pending'),
@@ -50,6 +55,34 @@ class Purchase(models.Model):
     def __str__(self):
         return f"{self.user} -> {self.category} ({self.status})"
 
+
+class CategoryAccess(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='category_accesses',
+        verbose_name="User"
+    )
+    category = models.ForeignKey(
+        'Category',
+        on_delete=models.CASCADE,
+        related_name='accesses',
+        verbose_name="Category"
+    )
+    access_level = models.IntegerField(
+        choices=AccessTier.choices,
+        default=AccessTier.VISITING,
+        verbose_name="Access Level"
+    )
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Expires At")
+
+    class Meta:
+        verbose_name = "Category Access"
+        verbose_name_plural = "Category Accesses"
+        unique_together = ('user', 'category')
+
+    def __str__(self):
+        return f"{self.user} -> {self.category} ({self.get_access_level_display()})"
 
 
 class Category(models.Model):
@@ -92,6 +125,12 @@ class Video(models.Model):
     """
 
     title = models.CharField(max_length=300, verbose_name="Title")
+    minimum_access_level = models.IntegerField(
+        choices=AccessTier.choices,
+        default=AccessTier.VISITING,
+        verbose_name="Minimum Access Level",
+        help_text="Required access level to watch this video."
+    )
     file = models.FileField(
         upload_to=video_upload_path,
         verbose_name="Video File",

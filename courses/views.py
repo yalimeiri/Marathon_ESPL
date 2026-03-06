@@ -26,8 +26,21 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 import requests
 import json
+from django.utils import timezone
 
-from .models import Category, Video, Purchase
+from .models import Category, Video, Purchase, CategoryAccess, AccessTier
+
+
+def get_effective_access_level(user, category):
+    if not user.is_authenticated:
+        return AccessTier.VISITING
+    
+    access = CategoryAccess.objects.filter(user=user, category=category).first()
+    if access:
+        if access.expires_at and access.expires_at <= timezone.now():
+            return AccessTier.VISITING
+        return access.access_level
+    return AccessTier.VISITING
 
 
 class CategoryListView(LoginRequiredMixin, ListView):
@@ -61,18 +74,13 @@ class VideoListView(LoginRequiredMixin, ListView):
 
     def dispatch(self, request, *args, **kwargs):
         self.category = get_object_or_404(Category, pk=self.kwargs["pk"])
-        # Check access
-        if not request.user.is_staff:
-            has_access = Purchase.objects.filter(
-                user=request.user, category=self.category, status='APPROVED'
-            ).exists()
-            if not has_access:
-                return redirect('courses:payment', pk=self.category.pk)
+        # Anyone authenticated can view the video list curriculum
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["category"] = self.category
+        ctx["user_access_level"] = get_effective_access_level(self.request.user, self.category)
         return ctx
 
 
@@ -97,11 +105,13 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
         # We need the video to find the category
         video = self.get_object()
         if not request.user.is_staff:
-            has_access = Purchase.objects.filter(
-                user=request.user, category=video.category, status='APPROVED'
-            ).exists()
-            if not has_access:
-                return redirect('courses:payment', pk=video.category.pk)
+            user_level = get_effective_access_level(request.user, video.category)
+            if user_level < video.minimum_access_level:
+                if user_level == AccessTier.PENDING:
+                    messages.info(request, "Your Bit payment is currently being reviewed. Please wait for approval to unlock this chapter.")
+                    return redirect('courses:video-list', pk=video.category.pk)
+                else:
+                    return redirect('courses:payment', pk=video.category.pk)
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -115,6 +125,7 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
             playlist = Video.objects.filter(category=video.category, is_published=True).order_by("order", "title")
             
         context['playlist'] = playlist
+        context['user_access_level'] = get_effective_access_level(self.request.user, video.category)
         
         # Find the next video in the list
         playlist_list = list(playlist)
@@ -155,14 +166,30 @@ class PaymentView(LoginRequiredMixin, DetailView):
             defaults={'phone_number': phone_number, 'payer_name': payer_name, 'status': 'PENDING'}
         )
         
+        # Sync to CategoryAccess
+        access, access_created = CategoryAccess.objects.get_or_create(
+            user=request.user,
+            category=category,
+            defaults={'access_level': AccessTier.PENDING}
+        )
+        
         if not created:
             if purchase.status == 'PENDING':
                 purchase.phone_number = phone_number
                 purchase.payer_name = payer_name
                 purchase.save()
             elif purchase.status == 'APPROVED':
-                messages.info(request, "You already have access to this course.")
-                return redirect('courses:video-list', pk=category.pk)
+                # Check actual effective access
+                eff_level = get_effective_access_level(request.user, category)
+                if eff_level >= AccessTier.PURCHASED:
+                    messages.info(request, "You already have access to this course.")
+                    return redirect('courses:video-list', pk=category.pk)
+                else:
+                    # Access expired or was revoked. Re-submit!
+                    purchase.status = 'PENDING'
+                    purchase.save()
+                    access.access_level = AccessTier.PENDING
+                    access.save()
 
         # Send Telegram Message
         bot_token = '8227368106:AAEbSmIdTFRwy1QUoiuGMJGo8SM_Nfh5-BA'
