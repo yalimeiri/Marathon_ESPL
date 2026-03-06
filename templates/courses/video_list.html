@@ -49,9 +49,9 @@
                     }
                 </style>
                 {% if video.is_pending %}
-                <span class="badge-pending">⏳ Pending</span>
+                <span class="badge-pending">✅ Temp Access</span>
                 {% elif video.is_premium %}
-                <span class="badge-premium">🔒 Premium</span>
+                <span class="badge-premium">⏳ Waiting for admins to confirm payment</span>
                 {% elif video.is_free_preview %}
                 <span class="badge-free">🔓 Free Preview</span>
                 {% endif %}

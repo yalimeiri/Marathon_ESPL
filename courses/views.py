@@ -116,11 +116,10 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
         if not request.user.is_staff:
             user_level = get_effective_access_level(request.user, video.category)
             if user_level < video.minimum_access_level:
-                if user_level == AccessTier.PENDING:
-                    messages.info(request, "Your Bit payment is currently being reviewed. Please wait for approval to unlock this chapter.")
-                    return redirect('courses:video-list', pk=video.category.pk)
-                else:
+                # If they are totally unauthorized (not pending), redirect to payment
+                if user_level != AccessTier.PENDING:
                     return redirect('courses:payment', pk=video.category.pk)
+                # If they ARE pending, we let dispatch continue so the template can render the modal
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
