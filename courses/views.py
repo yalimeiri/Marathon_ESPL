@@ -143,6 +143,7 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
             item.is_locked = (user_level < item.minimum_access_level) and (user_level != AccessTier.PENDING)
             
         video.is_waiting_admin = (user_level < video.minimum_access_level) and (user_level == AccessTier.PENDING)
+        video.is_locked = (user_level < video.minimum_access_level) and (user_level != AccessTier.PENDING)
             
         context['playlist'] = playlist
         context['user_access_level'] = user_level

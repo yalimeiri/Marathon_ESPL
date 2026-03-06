@@ -68,8 +68,8 @@
         <div
             style="background:#000;border-radius:12px;overflow:hidden;margin-bottom:24px;width:100%;aspect-ratio:16/9;position:relative;">
 
-            {% if video.is_pending %}
-            {# ── PENDING STATE: Show a clear message instead of the video ─────────────────────────── #}
+            {% if video.is_waiting_admin %}
+            {# ── WAITING ADMIN STATE: Show a clear message instead of the video ─────────────────────────── #}
             <div
                 style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(135deg, #1e293b, #0f172a); color:#f1f5f9; padding:24px; text-align:center;">
                 <div style="font-size:3rem; margin-bottom:16px;">⏳</div>
@@ -79,6 +79,22 @@
                     unlock this chapter.
                 </p>
                 <a href="{% url 'courses:category-list' %}"
+                    style="margin-top:24px; display:inline-block; padding:10px 24px; background:#4f46e5; color:white; border-radius:8px; text-decoration:none; font-weight:500; transition:background 0.2s;"
+                    onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
+                    ← Back to Courses
+                </a>
+            </div>
+
+            {% elif video.is_locked %}
+            {# ── LOCKED STATE: Show a premium locked message instead of the video ─────────────────────────── #}
+            <div
+                style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(135deg, #1e293b, #0f172a); color:#f1f5f9; padding:24px; text-align:center;">
+                <div style="font-size:3rem; margin-bottom:16px;">🔒</div>
+                <h2 style="font-size:1.5rem; font-weight:600; margin-bottom:12px;">Premium Content</h2>
+                <p style="color:#94a3b8; font-size:1rem; max-width:400px; line-height:1.5;">
+                    This video is locked. Please purchase the course to unlock the full curriculum.
+                </p>
+                <a href="{% url 'courses:payment' video.category.pk %}"
                     style="margin-top:24px; display:inline-block; padding:10px 24px; background:#4f46e5; color:white; border-radius:8px; text-decoration:none; font-weight:500; transition:background 0.2s;"
                     onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
                     ← Back to Courses
