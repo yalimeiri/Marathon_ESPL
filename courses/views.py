@@ -125,7 +125,8 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        video = self.get_object()
+        # Grab the exact instance Django already prepared for the template
+        video = context['video']
         
         # Get all videos in the same category (published only for learners)
         if self.request.user.is_staff:
