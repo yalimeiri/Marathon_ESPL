@@ -48,10 +48,12 @@
                         white-space: nowrap;
                     }
                 </style>
-                {% if video.is_pending %}
+                {% if video.is_temp_access %}
                 <span class="badge-pending">✅ Temp Access</span>
-                {% elif video.is_premium %}
+                {% elif video.is_waiting_admin %}
                 <span class="badge-premium">⏳ Waiting for admins to confirm payment</span>
+                {% elif video.is_locked %}
+                <span class="badge-premium">🔒 Premium</span>
                 {% elif video.is_free_preview %}
                 <span class="badge-free">🔓 Free Preview</span>
                 {% endif %}

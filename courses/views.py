@@ -84,11 +84,12 @@ class VideoListView(LoginRequiredMixin, ListView):
         user_level = get_effective_access_level(self.request.user, self.category)
         ctx["user_access_level"] = user_level
         
-        # Attach boolean flags to avoid `==` in templates (due to aggressive auto-formatter breaking tags)
+        # Attach explicit boolean states
         for video in ctx["videos"]:
-            video.is_pending = (user_level < video.minimum_access_level) and (user_level == AccessTier.PENDING) and (video.minimum_access_level == AccessTier.PURCHASED)
-            video.is_premium = (user_level < video.minimum_access_level) and not video.is_pending
             video.is_free_preview = (user_level >= video.minimum_access_level) and (video.minimum_access_level == AccessTier.VISITING)
+            video.is_temp_access = (user_level >= video.minimum_access_level) and (video.minimum_access_level == AccessTier.PENDING)
+            video.is_waiting_admin = (user_level < video.minimum_access_level) and (user_level == AccessTier.PENDING)
+            video.is_locked = (user_level < video.minimum_access_level) and (user_level != AccessTier.PENDING)
             
         return ctx
 
@@ -134,11 +135,14 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
             
         user_level = get_effective_access_level(self.request.user, video.category)
         
-        # Attach boolean flags to avoid `==` in templates (due to aggressive auto-formatter breaking tags)
+        # Attach explicit boolean states
         for item in playlist:
-            item.is_pending = (user_level < item.minimum_access_level) and (user_level == AccessTier.PENDING) and (item.minimum_access_level == AccessTier.PURCHASED)
-            item.is_premium = (user_level < item.minimum_access_level) and not item.is_pending
             item.is_free_preview = (user_level >= item.minimum_access_level) and (item.minimum_access_level == AccessTier.VISITING)
+            item.is_temp_access = (user_level >= item.minimum_access_level) and (item.minimum_access_level == AccessTier.PENDING)
+            item.is_waiting_admin = (user_level < item.minimum_access_level) and (user_level == AccessTier.PENDING)
+            item.is_locked = (user_level < item.minimum_access_level) and (user_level != AccessTier.PENDING)
+            
+        video.is_waiting_admin = (user_level < video.minimum_access_level) and (user_level == AccessTier.PENDING)
             
         context['playlist'] = playlist
         context['user_access_level'] = user_level
