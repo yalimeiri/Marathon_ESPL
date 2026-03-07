@@ -28,7 +28,7 @@ import requests
 import json
 from django.utils import timezone
 
-from .models import Category, Video, Purchase, CategoryAccess, AccessTier
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier
 
 
 def get_effective_access_level(user, category):
