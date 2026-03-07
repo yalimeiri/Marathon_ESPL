@@ -140,34 +140,46 @@
                 <!-- The Video Element (scaled and translated) -->
                 <div id="video-zoom-wrapper"
                     style="width:100%;height:100%;transform-origin:center center;transition:transform 0.2s ease-out;">
-                    <!-- Hide native controls so we can fully control the experience, or at least disable the native fullscreen button if possible. 
-                         Instead, we'll keep native controls but overlay our own fullscreen button -->
-                    <video id="main-video-player" controls controlsList="nodownload" oncontextmenu="return false;"
-                        style="width:100%;height:100%;display:block;" preload="metadata">
+                    <!-- Hide native controls so we can fully control the experience -->
+                    <video id="main-video-player" controlsList="nodownload" oncontextmenu="return false;"
+                        style="width:100%;height:100%;display:block;" preload="metadata" playsinline>
                         <source src="{% if url %}{{ url }}{% else %}{{ video.file.url }}{% endif %}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
                 </div>
 
                 <!-- The transparent overlay to absorb clicks for both dragging AND preventing native right click -->
-                <!-- We leave the bottom 60px open so the user can interact with the native video timeline/volume -->
                 <div id="video-drag-overlay"
-                    style="position:absolute;top:0;left:0;width:100%;height:calc(100% - 60px);z-index:10;cursor:default;"
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;cursor:default;"
                     oncontextmenu="return false;"></div>
 
                 <!-- Floating Toolbar injected INSIDE the container so it persists in fullscreen -->
                 <div id="custom-zoom-toolbar"
-                    style="position:absolute; top:20px; right:20px; z-index:20; display:flex; gap:8px; background:rgba(15, 23, 42, 0.7); padding:8px; border-radius:8px; backdrop-filter:blur(4px); transition:opacity 0.3s;">
+                    style="position:absolute; top:20px; right:20px; z-index:20; display:flex; gap:8px; background:rgba(15, 23, 42, 0.7); padding:8px; border-radius:8px; backdrop-filter:blur(4px); transition:opacity 0.3s; opacity:0; pointer-events:none;">
                     <button id="btn-zoom-in" title="Zoom In"
                         style="background:#4f46e5; color:white; border:none; width:36px; height:36px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:1.1rem; display:flex; align-items:center; justify-content:center;">+</button>
                     <button id="btn-zoom-out" title="Zoom Out"
                         style="background:#4f46e5; color:white; border:none; width:36px; height:36px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:1.1rem; display:flex; align-items:center; justify-content:center;">-</button>
                     <button id="btn-zoom-reset" title="Reset Zoom"
                         style="background:#334155; color:white; border:none; padding:0 12px; height:36px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem;">Reset</button>
-                    <!-- Custom Fullscreen Toggle to fullscreen the container, NOT the video -->
+                </div>
+
+                <!-- Custom Video Controls (Bottom) -->
+                <div id="custom-video-controls"
+                    style="position:absolute; bottom:0; left:0; width:100%; height:60px; background:linear-gradient(to top, rgba(0,0,0,0.85), transparent); z-index:40; display:flex; align-items:center; padding:0 20px; gap:16px; opacity:0; transition:opacity 0.3s;">
+                    <button id="ctrl-playpause"
+                        style="background:none; border:none; color:white; font-size:1.4rem; cursor:pointer; width:30px; display:flex; justify-content:center; text-shadow:0 2px 4px rgba(0,0,0,0.5);">▶</button>
+                    <span id="ctrl-time"
+                        style="color:#e2e8f0; font-size:0.85rem; font-family:monospace; font-weight:500; min-width:85px; text-shadow:0 1px 3px rgba(0,0,0,0.5);">0:00
+                        / 0:00</span>
+                    <input type="range" id="ctrl-progress" value="0" step="0.1"
+                        style="flex-grow:1; cursor:pointer; accent-color:#6366f1; height:4px;" title="Seek">
+                    <button id="ctrl-volume"
+                        style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer; width:30px; display:flex; justify-content:center; text-shadow:0 1px 3px rgba(0,0,0,0.5);">🔊</button>
+                    <input type="range" id="ctrl-vol-slider" min="0" max="1" step="0.05" value="1"
+                        style="width: 80px; cursor:pointer; accent-color:#6366f1; height:4px;" title="Volume">
                     <button id="btn-custom-fullscreen" title="Toggle Fullscreen"
-                        style="background:#0ea5e9; color:white; border:none; padding:0 12px; height:36px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; margin-left:8px;">⛶
-                        Fullscreen</button>
+                        style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer; text-shadow:0 1px 3px rgba(0,0,0,0.5);">⛶</button>
                 </div>
 
                 {% if next_video_url %}
@@ -187,21 +199,8 @@
                 {% endif %}
             </div>
 
-            <style>
-                /* Hide the native fullscreen button from Chromium/Webkit browsers to force use of our custom button */
-                video::-webkit-media-controls-fullscreen-button {
-                    display: none;
-                }
-
-                /* Fade toolbar out when not hovering the container */
-                #video-zoom-container:not(:hover) #custom-zoom-toolbar {
-                    opacity: 0;
-                    pointer-events: none;
-                }
-            </style>
             {% endif %}
             {% endwith %}
-            {% endif %}
         </div>
         {% else %}
         <p style="color:#f87171;margin-bottom:24px;">⚠️ No video file attached to this lesson.</p>
@@ -514,8 +513,107 @@
         }
 
         // Global Keyboard Controls for Video Playback
-        const videoElement = document.getElementById("main-video-player");
         if (videoElement) {
+            // Setup Custom Controls
+            const playBtn = document.getElementById("ctrl-playpause");
+            const timeDisplay = document.getElementById("ctrl-time");
+            const progressBar = document.getElementById("ctrl-progress");
+            const volBtn = document.getElementById("ctrl-volume");
+            const volSlider = document.getElementById("ctrl-vol-slider");
+            const controlsContainer = document.getElementById("custom-video-controls");
+            const zoomToolbar = document.getElementById("custom-zoom-toolbar");
+            const videoZoomContainer = document.getElementById("video-zoom-container");
+
+            if (playBtn) {
+                function formatTime(seconds) {
+                    if (isNaN(seconds)) return "0:00";
+                    const m = Math.floor(seconds / 60);
+                    const s = Math.floor(seconds % 60);
+                    return m + ':' + (s < 10 ? '0' : '') + s;
+                }
+
+                videoElement.addEventListener('loadedmetadata', () => {
+                    progressBar.max = videoElement.duration;
+                    timeDisplay.textContent = formatTime(videoElement.currentTime) + ' / ' + formatTime(videoElement.duration);
+                });
+
+                videoElement.addEventListener('timeupdate', () => {
+                    if (!progressBar.dragging) progressBar.value = videoElement.currentTime;
+                    timeDisplay.textContent = formatTime(videoElement.currentTime) + ' / ' + formatTime(videoElement.duration);
+                });
+
+                progressBar.addEventListener('input', () => {
+                    progressBar.dragging = true;
+                    timeDisplay.textContent = formatTime(progressBar.value) + ' / ' + formatTime(videoElement.duration);
+                });
+
+                progressBar.addEventListener('change', () => {
+                    videoElement.currentTime = progressBar.value;
+                    progressBar.dragging = false;
+                });
+
+                playBtn.addEventListener('click', () => {
+                    if (videoElement.paused || videoElement.ended) videoElement.play();
+                    else videoElement.pause();
+                });
+
+                videoElement.addEventListener('play', () => playBtn.textContent = "⏸");
+                videoElement.addEventListener('pause', () => playBtn.textContent = "▶");
+
+                volSlider.addEventListener('input', () => {
+                    videoElement.volume = volSlider.value;
+                    videoElement.muted = (videoElement.volume === 0);
+                    updateVolIcon();
+                });
+
+                volBtn.addEventListener('click', () => {
+                    videoElement.muted = !videoElement.muted;
+                    if (!videoElement.muted && videoElement.volume === 0) {
+                        videoElement.volume = 1;
+                        volSlider.value = 1;
+                    }
+                    updateVolIcon();
+                });
+
+                function updateVolIcon() {
+                    if (videoElement.muted || videoElement.volume === 0) volBtn.textContent = '🔇';
+                    else if (videoElement.volume < 0.5) volBtn.textContent = '🔉';
+                    else volBtn.textContent = '🔊';
+                }
+
+                // Controls visibility logic (hide after 2.5s)
+                let controlTimeout;
+                function showControls() {
+                    controlsContainer.style.opacity = '1';
+                    zoomToolbar.style.opacity = '1';
+                    zoomToolbar.style.pointerEvents = 'auto';
+                    videoZoomContainer.style.cursor = 'default';
+                    clearTimeout(controlTimeout);
+                    if (!videoElement.paused) {
+                        controlTimeout = setTimeout(() => {
+                            controlsContainer.style.opacity = '0';
+                            zoomToolbar.style.opacity = '0';
+                            zoomToolbar.style.pointerEvents = 'none';
+                            if (document.fullscreenElement) {
+                                videoZoomContainer.style.cursor = 'none'; // hide cursor in fullscreen when inactive
+                            }
+                        }, 2500);
+                    }
+                }
+
+                videoZoomContainer.addEventListener('mousemove', showControls);
+                videoZoomContainer.addEventListener('mouseleave', () => {
+                    if (!videoElement.paused) {
+                        controlsContainer.style.opacity = '0';
+                        zoomToolbar.style.opacity = '0';
+                        zoomToolbar.style.pointerEvents = 'none';
+                    }
+                });
+                videoElement.addEventListener('pause', showControls);
+                // Also trigger initially
+                showControls();
+            }
+
             window.addEventListener("keydown", (e) => {
                 // Ignore keys if the user is typing in an input field (e.g., search or comments)
                 if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
