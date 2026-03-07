@@ -59,7 +59,7 @@
         {% with url=video.cloudinary_url|default_if_none:"" %}
         {% if "youtube.com" not in url and "youtu.be" not in url and "drive.google.com" not in url %}
         <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:12px;" id="zoom-hint-text">
-            💡 <strong>לתשומת ליבכם:</strong> ניתן להגדיל ולהקטין את התמונה בעזרת העכבר 🖱️
+            🖱️ <strong>לתשומת ליבכם:</strong> ניתן להגדיל ולהקטין את התמונה בעזרת העכבר 💡
         </p>
         {% endif %}
         {% endwith %}
@@ -553,14 +553,24 @@
                     return m + ':' + (s < 10 ? '0' : '') + s;
                 }
 
-                videoElement.addEventListener('loadedmetadata', () => {
-                    progressBar.max = videoElement.duration;
-                    timeDisplay.textContent = formatTime(videoElement.currentTime) + ' / ' + formatTime(videoElement.duration);
-                });
+                const updateMaxTime = () => {
+                    if (isFinite(videoElement.duration)) {
+                        progressBar.max = videoElement.duration;
+                        timeDisplay.textContent = formatTime(videoElement.currentTime) + ' / ' + formatTime(videoElement.duration);
+                    }
+                };
+
+                if (videoElement.readyState >= 1) {
+                    updateMaxTime();
+                }
+                videoElement.addEventListener('loadedmetadata', updateMaxTime);
+                videoElement.addEventListener('durationchange', updateMaxTime);
 
                 videoElement.addEventListener('timeupdate', () => {
-                    if (!progressBar.dragging) progressBar.value = videoElement.currentTime;
-                    timeDisplay.textContent = formatTime(videoElement.currentTime) + ' / ' + formatTime(videoElement.duration);
+                    if (!progressBar.dragging) {
+                        progressBar.value = videoElement.currentTime;
+                        timeDisplay.textContent = formatTime(videoElement.currentTime) + ' / ' + formatTime(videoElement.duration);
+                    }
                 });
 
                 progressBar.addEventListener('input', () => {
