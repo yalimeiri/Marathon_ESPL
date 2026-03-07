@@ -274,7 +274,7 @@ def telegram_webhook(request, bot_token):
                 callback_id = callback_query.get('id')
                 data = callback_query.get('data', '')
                 message = callback_query.get('message', {})
-                chat_id = message.get('chat', {}).get('id')
+                chat_id = message.get('chat', {}).get('id') or '-5199045814'
                 message_id = message.get('message_id')
                 
                 # Check for our action prefixes
@@ -282,8 +282,17 @@ def telegram_webhook(request, bot_token):
                     action, purchase_id_str = data.split('_', 1)
                     
                     try:
-                        purchase = Purchase.objects.get(id=int(purchase_id_str))
-                        category_access = CategoryAccess.objects.get(user=purchase.user, category=purchase.category)
+                        purchase = Purchase.objects.filter(id=int(purchase_id_str)).first()
+                        if not purchase:
+                            requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": chat_id, "text": f"Error: Purchase #{purchase_id_str} not found in database!"})
+                            requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Failed."})
+                            return JsonResponse({"status": "ok"})
+                            
+                        category_access = CategoryAccess.objects.filter(user=purchase.user, category=purchase.category).first()
+                        if not category_access:
+                            requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": chat_id, "text": f"Error: No CategoryAccess found for Purchase #{purchase_id_str} (User: {purchase.user})."})
+                            requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Failed."})
+                            return JsonResponse({"status": "ok"})
                         
                         action_text = ""
                         
@@ -319,13 +328,15 @@ def telegram_webhook(request, bot_token):
                                 "text": new_text
                             })
                             
-                    except (Purchase.DoesNotExist, CategoryAccess.DoesNotExist, ValueError):
-                        # Answer gracefully if records vanish
-                        answer_url = f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery"
-                        requests.post(answer_url, json={"callback_query_id": callback_id, "text": "Error: Record not found."})
+                    except Exception as e:
+                        # Send detailed error log to telegram directly
+                        err_msg = f"Webhook Error on {action}_{purchase_id_str}: {str(e)}"
+                        requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": chat_id, "text": err_msg})
+                        requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Internal error occurred."})
 
-        except json.JSONDecodeError:
-            pass
+        except Exception as e:
+            # Broadest exception sent to telegram chat
+             requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": '-5199045814', "text": f"Major Webhook Parsing Error: {str(e)}"})
 
     return JsonResponse({"status": "ok"})
 
