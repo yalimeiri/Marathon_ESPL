@@ -190,6 +190,21 @@
     <a href="{% url 'courses:category-list' %}" class="back-link">← All Courses</a>
     <h1>{{ category.name }}</h1>
     <p>{{ category.description }}</p>
+
+    {% if user_access_level == 0 %}
+    <div style="margin-top: 16px;">
+        <a href="{% url 'courses:payment' category.pk %}"
+            style="display:inline-flex; align-items:center; gap:8px; padding:10px 24px; background:#4f46e5; color:white; border-radius:8px; text-decoration:none; font-weight:600; font-size:1rem; transition:background 0.2s;"
+            onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
+            💳 Purchase Course
+        </a>
+    </div>
+    {% elif user_access_level == 1 %}
+    <div
+        style="margin-top: 16px; display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:#334155; color:#cbd5e1; border-radius:8px; font-weight:500; font-size:0.95rem;">
+        ⏳ Your purchase is pending admin approval
+    </div>
+    {% endif %}
 </div>
 
 {% if subcategories %}
