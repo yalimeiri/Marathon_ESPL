@@ -211,3 +211,55 @@ class Video(models.Model):
 
     def __str__(self):
         return f"{self.title} [{self.category}]"
+
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.utils import timezone
+from datetime import timedelta
+
+@receiver(post_save, sender=Purchase)
+def sync_purchase_to_access(sender, instance, created, **kwargs):
+    """
+    Ensure CategoryAccess stays mirrored to the Purchase status.
+    This handles changes made manually via Django Admin.
+    """
+    access, _ = CategoryAccess.objects.get_or_create(
+        user=instance.user,
+        category=instance.category
+    )
+    
+    # Check highest ranking purchase status for this course
+    purchases = Purchase.objects.filter(user=instance.user, category=instance.category)
+    
+    if purchases.filter(status='APPROVED').exists():
+        access.access_level = AccessTier.PURCHASED
+        if not access.expires_at:
+            access.expires_at = timezone.now() + timedelta(days=120)
+    elif purchases.filter(status='PENDING').exists():
+        access.access_level = AccessTier.PENDING
+        access.expires_at = None
+    else:
+        access.access_level = AccessTier.VISITING
+        access.expires_at = None
+        
+    access.save()
+
+
+@receiver(post_delete, sender=Purchase)
+def cleanup_access_on_purchase_delete(sender, instance, **kwargs):
+    """
+    If a purchase is deleted (e.g. via Admin), recalculate their access.
+    """
+    purchases = Purchase.objects.filter(user=instance.user, category=instance.category)
+    
+    access = CategoryAccess.objects.filter(user=instance.user, category=instance.category).first()
+    if access:
+        if purchases.filter(status='APPROVED').exists():
+            access.access_level = AccessTier.PURCHASED
+        elif purchases.filter(status='PENDING').exists():
+            access.access_level = AccessTier.PENDING
+            access.expires_at = None
+        else:
+            access.access_level = AccessTier.VISITING
+            access.expires_at = None
+        access.save()
