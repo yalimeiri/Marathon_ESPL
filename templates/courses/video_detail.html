@@ -178,6 +178,19 @@
                         style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer; width:30px; display:flex; justify-content:center; text-shadow:0 1px 3px rgba(0,0,0,0.5);">🔊</button>
                     <input type="range" id="ctrl-vol-slider" min="0" max="1" step="0.05" value="1"
                         style="width: 80px; cursor:pointer; accent-color:#6366f1; height:4px;" title="Volume">
+
+                    <!-- Speed Control -->
+                    <select id="ctrl-speed"
+                        style="background:transparent; color:white; border:none; font-size:0.9rem; font-weight:600; cursor:pointer; outline:none; text-shadow:0 1px 3px rgba(0,0,0,0.5); -webkit-appearance:none; -moz-appearance:none; appearance:none;">
+                        <option value="0.5" style="color:black;">0.5x</option>
+                        <option value="0.75" style="color:black;">0.75x</option>
+                        <option value="1" selected style="color:black;">1x</option>
+                        <option value="1.25" style="color:black;">1.25x</option>
+                        <option value="1.5" style="color:black;">1.5x</option>
+                        <option value="1.75" style="color:black;">1.75x</option>
+                        <option value="2" style="color:black;">2x</option>
+                    </select>
+
                     <button id="btn-custom-fullscreen" title="Toggle Fullscreen"
                         style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer; text-shadow:0 1px 3px rgba(0,0,0,0.5);">⛶</button>
                 </div>
@@ -522,6 +535,7 @@
             const progressBar = document.getElementById("ctrl-progress");
             const volBtn = document.getElementById("ctrl-volume");
             const volSlider = document.getElementById("ctrl-vol-slider");
+            const speedSelect = document.getElementById("ctrl-speed");
             const controlsContainer = document.getElementById("custom-video-controls");
             const zoomToolbar = document.getElementById("custom-zoom-toolbar");
             const videoZoomContainer = document.getElementById("video-zoom-container");
@@ -577,6 +591,12 @@
                     }
                     updateVolIcon();
                 });
+
+                if (speedSelect) {
+                    speedSelect.addEventListener('change', () => {
+                        videoElement.playbackRate = parseFloat(speedSelect.value);
+                    });
+                }
 
                 function updateVolIcon() {
                     if (videoElement.muted || videoElement.volume === 0) volBtn.textContent = '🔇';
