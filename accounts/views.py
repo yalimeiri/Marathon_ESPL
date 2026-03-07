@@ -27,14 +27,14 @@ class RegisterView(CreateView):
         try:
             site_url = self.request.build_absolute_uri('/courses/')
             send_mail(
-                subject="ברוך הבא ל-MarathonLMS!",
+                subject="ברוך הבא ל-TheFlyingSquirrel!",
                 message=(
                     f"שלום {user.username},\n\n"
                     f"ההרשמה שלך הסתיימה בהצלחה!\n\n"
                     f"שם משתמש: {user.username}\n\n"
                     f"כדי להיכנס לאתר: {site_url}\n\n"
                     f"שים לב: החשבון שלך נעול למחשב/דפדפן שבו נרשמת.\n\n"
-                    f"בברכה,\nצוות MarathonLMS"
+                    f"בברכה,\nצוות TheFlyingSquirrel"
                 ),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
