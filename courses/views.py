@@ -61,14 +61,20 @@ class VideoListView(LoginRequiredMixin, ListView):
     Lists published videos in ascending order for a single category.
     """
 
-    model = Video
+    model = Subcategory
     template_name = "courses/video_list.html"
-    context_object_name = "videos"
+    context_object_name = "subcategories"
 
     def get_queryset(self):
+        from django.db.models import Prefetch
         self.category = get_object_or_404(Category, pk=self.kwargs["pk"])
+        
+        # Prefetch only published videos to attach to each subcategory
+        published_videos = Video.objects.filter(is_published=True).order_by("order", "title")
+        
         return (
-            Video.objects.filter(category=self.category, is_published=True)
+            Subcategory.objects.filter(category=self.category)
+            .prefetch_related(Prefetch("videos", queryset=published_videos))
             .order_by("order", "title")
         )
 
@@ -84,12 +90,13 @@ class VideoListView(LoginRequiredMixin, ListView):
         user_level = get_effective_access_level(self.request.user, self.category)
         ctx["user_access_level"] = user_level
         
-        # Attach explicit boolean states
-        for video in ctx["videos"]:
-            video.is_free_preview = (user_level >= video.minimum_access_level) and (video.minimum_access_level == AccessTier.VISITING)
-            video.is_temp_access = (user_level >= video.minimum_access_level) and (video.minimum_access_level == AccessTier.PENDING)
-            video.is_waiting_admin = (user_level < video.minimum_access_level) and (user_level == AccessTier.PENDING)
-            video.is_locked = (user_level < video.minimum_access_level) and (user_level != AccessTier.PENDING)
+        # Attach explicit boolean states to nested videos
+        for subcategory in ctx["subcategories"]:
+            for video in subcategory.videos.all():
+                video.is_free_preview = (user_level >= video.minimum_access_level) and (video.minimum_access_level == AccessTier.VISITING)
+                video.is_temp_access = (user_level >= video.minimum_access_level) and (video.minimum_access_level == AccessTier.PENDING)
+                video.is_waiting_admin = (user_level < video.minimum_access_level) and (user_level == AccessTier.PENDING)
+                video.is_locked = (user_level < video.minimum_access_level) and (user_level != AccessTier.PENDING)
             
         return ctx
 
@@ -129,28 +136,33 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
         video = context['video']
         
         # Get all videos in the same category (published only for learners)
+        from django.db.models import Prefetch
         if self.request.user.is_staff:
-            playlist = Video.objects.filter(category=video.category).order_by("order", "title")
+            published_videos = Video.objects.filter(category=video.category).order_by("order", "title")
         else:
-            playlist = Video.objects.filter(category=video.category, is_published=True).order_by("order", "title")
+            published_videos = Video.objects.filter(category=video.category, is_published=True).order_by("order", "title")
+            
+        subcategories = Subcategory.objects.filter(category=video.category).prefetch_related(Prefetch("videos", queryset=published_videos)).order_by("order", "title")
             
         user_level = get_effective_access_level(self.request.user, video.category)
         
-        # Attach explicit boolean states
-        for item in playlist:
-            item.is_free_preview = (user_level >= item.minimum_access_level) and (item.minimum_access_level == AccessTier.VISITING)
-            item.is_temp_access = (user_level >= item.minimum_access_level) and (item.minimum_access_level == AccessTier.PENDING)
-            item.is_waiting_admin = (user_level < item.minimum_access_level) and (user_level == AccessTier.PENDING)
-            item.is_locked = (user_level < item.minimum_access_level) and (user_level != AccessTier.PENDING)
+        # Attach explicit boolean states and build flat list for prev/next calculation
+        playlist_list = []
+        for subcategory in subcategories:
+            for item in subcategory.videos.all():
+                item.is_free_preview = (user_level >= item.minimum_access_level) and (item.minimum_access_level == AccessTier.VISITING)
+                item.is_temp_access = (user_level >= item.minimum_access_level) and (item.minimum_access_level == AccessTier.PENDING)
+                item.is_waiting_admin = (user_level < item.minimum_access_level) and (user_level == AccessTier.PENDING)
+                item.is_locked = (user_level < item.minimum_access_level) and (user_level != AccessTier.PENDING)
+                playlist_list.append(item)
             
         video.is_waiting_admin = (user_level < video.minimum_access_level) and (user_level == AccessTier.PENDING)
         video.is_locked = (user_level < video.minimum_access_level) and (user_level != AccessTier.PENDING)
             
-        context['playlist'] = playlist
+        context['subcategories'] = subcategories
         context['user_access_level'] = user_level
         
         # Find the next video in the list
-        playlist_list = list(playlist)
         try:
             current_idx = playlist_list.index(video)
             if current_idx + 1 < len(playlist_list):

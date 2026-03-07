@@ -103,6 +103,30 @@ class Category(models.Model):
         return self.name
 
 
+class Subcategory(models.Model):
+    """
+    A sub-grouping under a Category (e.g., "Chapter 1").
+    Videos belong to a Subcategory.
+    """
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="subcategories",
+        verbose_name="Course"
+    )
+    title = models.CharField(max_length=200, verbose_name="Subcategory Title")
+    description = models.TextField(blank=True, verbose_name="Description")
+    order = models.IntegerField(default=0, verbose_name="Order")
+
+    class Meta:
+        verbose_name = "Subcategory"
+        verbose_name_plural = "Subcategories"
+        ordering = ["order", "title"]
+
+    def __str__(self):
+        return f"{self.category.name} - {self.title}"
+
+
 def video_upload_path(instance, filename):
     """
     Store videos in: media/videos/<category_id>/<filename>
@@ -157,6 +181,14 @@ class Video(models.Model):
         blank=True,
         related_name="videos",
         verbose_name="Category",
+    )
+    subcategory = models.ForeignKey(
+        Subcategory,
+        on_delete=models.CASCADE,
+        related_name="videos",
+        verbose_name="Subcategory",
+        blank=True,
+        null=True
     )
     description = models.TextField(blank=True, verbose_name="Description")
     order = models.PositiveIntegerField(

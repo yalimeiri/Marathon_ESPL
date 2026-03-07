@@ -16,7 +16,14 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
 
-from .models import Category, Video, Purchase, CategoryAccess
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess
+
+@admin.register(Subcategory)
+class SubcategoryAdmin(admin.ModelAdmin):
+    list_display = ("title", "category", "order")
+    list_filter = ("category",)
+    search_fields = ("title", "description", "category__name")
+    ordering = ("category", "order", "title")
 
 
 @admin.register(Purchase)
@@ -118,7 +125,7 @@ class VideoAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {
-            "fields": ("title", "category", "order", "minimum_access_level", "is_published"),
+            "fields": ("title", "category", "subcategory", "order", "minimum_access_level", "is_published"),
         }),
         ("Content", {
             "fields": ("file", "cloudinary_url", "public_id", "description"),
