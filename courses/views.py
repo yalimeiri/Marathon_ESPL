@@ -250,6 +250,86 @@ class PaymentView(LoginRequiredMixin, DetailView):
         return redirect('courses:category-list')
 
 
+from django.views.decorators.csrf import csrf_exempt
+from datetime import timedelta
+
+@csrf_exempt
+def telegram_webhook(request, bot_token):
+    """
+    POST /courses/webhook/telegram/<bot_token>/
+    Receives callback queries from Telegram inline keyboards (Approve/Reject).
+    """
+    # Verify the incoming bot token matches our secret to prevent unauthorized requests
+    configured_token = '8227368106:AAEbSmIdTFRwy1QUoiuGMJGo8SM_Nfh5-BA'
+    if bot_token != configured_token:
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
+    if request.method == 'POST':
+        try:
+            payload = json.loads(request.body)
+            
+            # We only care about button clicks: 'callback_query'
+            if 'callback_query' in payload:
+                callback_query = payload['callback_query']
+                callback_id = callback_query.get('id')
+                data = callback_query.get('data', '')
+                message = callback_query.get('message', {})
+                chat_id = message.get('chat', {}).get('id')
+                message_id = message.get('message_id')
+                
+                # Check for our action prefixes
+                if data.startswith('approve_') or data.startswith('reject_'):
+                    action, purchase_id_str = data.split('_', 1)
+                    
+                    try:
+                        purchase = Purchase.objects.get(id=int(purchase_id_str))
+                        category_access = CategoryAccess.objects.get(user=purchase.user, category=purchase.category)
+                        
+                        action_text = ""
+                        
+                        if action == 'approve':
+                            purchase.status = 'APPROVED'
+                            purchase.save()
+                            
+                            category_access.access_level = AccessTier.PURCHASED
+                            category_access.expires_at = timezone.now() + timedelta(days=120)  # 4 months
+                            category_access.save()
+                            action_text = "✅ Approved "
+                            
+                        elif action == 'reject':
+                            purchase.status = 'REJECTED'
+                            purchase.save()
+                            
+                            category_access.access_level = AccessTier.VISITING
+                            category_access.expires_at = None
+                            category_access.save()
+                            action_text = "❌ Rejected "
+                            
+                        # Answer the callback query to stop the loading animation on the Telegram button
+                        answer_url = f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery"
+                        requests.post(answer_url, json={"callback_query_id": callback_id, "text": f"Status updated to {purchase.status}"})
+                        
+                        # Edit the original message to reflect the new state and remove buttons
+                        if chat_id and message_id:
+                            edit_url = f"https://api.telegram.org/bot{configured_token}/editMessageText"
+                            new_text = f"{message.get('text', '')}\n\n{action_text}by Admin."
+                            requests.post(edit_url, json={
+                                "chat_id": chat_id,
+                                "message_id": message_id,
+                                "text": new_text
+                            })
+                            
+                    except (Purchase.DoesNotExist, CategoryAccess.DoesNotExist, ValueError):
+                        # Answer gracefully if records vanish
+                        answer_url = f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery"
+                        requests.post(answer_url, json={"callback_query_id": callback_id, "text": "Error: Record not found."})
+
+        except json.JSONDecodeError:
+            pass
+
+    return JsonResponse({"status": "ok"})
+
+
 # ── Upload Manager (superuser only) ─────────────────────────────────────────
 
 _superuser_only = user_passes_test(lambda u: u.is_active and u.is_superuser)
