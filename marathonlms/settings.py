@@ -46,6 +46,18 @@ CSRF_TRUSTED_ORIGINS += config(
     "CSRF_TRUSTED_ORIGINS", default="", cast=Csv()
 )
 
+# ── HTTPS & Security ────────────────────────────────────────────────────────
+# In production on Railway, HTTPS is handled by their proxy. We need to tell
+# Django to trust the strict HTTPS header from the proxy.
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
 
 # ── Application definition ──────────────────────────────────────────────────
 INSTALLED_APPS = [
