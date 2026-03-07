@@ -77,7 +77,8 @@ class CustomPasswordResetView(PasswordResetView):
             return super().form_valid(form)
 
         # Check the device cookie in the current browser
-        cookie_name = getattr(settings, "DEVICE_COOKIE_NAME", "device_token")
+        base_cookie_name = getattr(settings, "DEVICE_COOKIE_NAME", "device_token")
+        cookie_name = f"{base_cookie_name}_{user.pk}"
         signed_token = self.request.COOKIES.get(cookie_name)
         token_value = _unsign(signed_token) if signed_token else None
         db_uuid = str(user.device_uuid)

@@ -84,8 +84,10 @@ class SingleDeviceLoginMiddleware:
         # Case A: Brand new user/device — issued a fresh UUID this request cycle.
         #         Set the cookie on the response so the browser stores it.
         new_uuid = getattr(request, "_new_device_uuid", None)
-        if new_uuid:
-            self._set_cookie(response, new_uuid)
+        if new_uuid and request.user.is_authenticated:
+            # Suffix cookie with user pk so multiple users sharing a PC don't overwrite each other
+            user_cookie_name = f"{self.cookie_name}_{request.user.pk}"
+            self._set_cookie(response, user_cookie_name, new_uuid)
             logger.info("Device cookie issued for user '%s'.", 
                         getattr(request.user, "username", "?"))
 
@@ -95,7 +97,8 @@ class SingleDeviceLoginMiddleware:
         #         ran but before the browser follows the redirect).
         existing_uuid = getattr(request, "_existing_device_uuid", None)
         if existing_uuid and request.user.is_authenticated and not request.user.is_staff:
-            incoming_signed = request.COOKIES.get(self.cookie_name)
+            user_cookie_name = f"{self.cookie_name}_{request.user.pk}"
+            incoming_signed = request.COOKIES.get(user_cookie_name)
             incoming_uuid = _unsign(incoming_signed) if incoming_signed else None
 
             if incoming_uuid != existing_uuid:
@@ -136,7 +139,8 @@ class SingleDeviceLoginMiddleware:
             return None
 
         # Read and validate the signed cookie.
-        signed_token = request.COOKIES.get(self.cookie_name)
+        user_cookie_name = f"{self.cookie_name}_{user.pk}"
+        signed_token = request.COOKIES.get(user_cookie_name)
 
         if not signed_token:
             logger.warning("Device cookie missing for '%s' — logging out.", user.username)
@@ -160,10 +164,10 @@ class SingleDeviceLoginMiddleware:
 
     # ── Cookie management ──────────────────────────────────────────────────
 
-    def _set_cookie(self, response, uuid_value: str):
+    def _set_cookie(self, response, cookie_name: str, uuid_value: str):
         signed = _sign(uuid_value)
         response.set_cookie(
-            self.cookie_name,
+            cookie_name,
             signed,
             max_age=self.cookie_age,
             httponly=True,
