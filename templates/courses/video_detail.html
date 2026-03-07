@@ -561,7 +561,8 @@
 
                 videoElement.addEventListener('play', () => playBtn.textContent = "⏸");
                 videoElement.addEventListener('pause', () => playBtn.textContent = "▶");
-
+                videoElement.addEventListener('volumechange', () => updateVolIcon());
+                videoElement.addEventListener('speedchange', () => updateSpeedIcon());
                 volSlider.addEventListener('input', () => {
                     videoElement.volume = volSlider.value;
                     videoElement.muted = (videoElement.volume === 0);
