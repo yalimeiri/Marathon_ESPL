@@ -22,6 +22,9 @@ urlpatterns = [
 
     # Telegram Webhook endpoint (Bot Token acts as security path variable)
     path("webhook/telegram/<str:bot_token>/", views.telegram_webhook, name="telegram-webhook"),
+    
+    # Internal debugging endpoint
+    path("manager/debug/purchases/", views.debug_purchases, name="debug-purchases"),
 
     # ── Upload Manager (superuser only) ────────────────────────────────────
     path("manager/upload/", views.upload_video_page, name="upload-video"),
