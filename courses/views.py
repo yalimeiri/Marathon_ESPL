@@ -95,6 +95,7 @@ class VideoListView(LoginRequiredMixin, ListView):
             for video in subcategory.videos.all():
                 video.is_free_preview = (user_level >= video.minimum_access_level) and (video.minimum_access_level == AccessTier.VISITING)
                 video.is_temp_access = (user_level >= video.minimum_access_level) and (video.minimum_access_level == AccessTier.PENDING)
+                video.is_premium_access = (user_level >= video.minimum_access_level) and (video.minimum_access_level == AccessTier.PURCHASED)
                 video.is_waiting_admin = (user_level < video.minimum_access_level) and (user_level == AccessTier.PENDING)
                 video.is_locked = (user_level < video.minimum_access_level) and (user_level != AccessTier.PENDING)
             
@@ -152,6 +153,7 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
             for item in subcategory.videos.all():
                 item.is_free_preview = (user_level >= item.minimum_access_level) and (item.minimum_access_level == AccessTier.VISITING)
                 item.is_temp_access = (user_level >= item.minimum_access_level) and (item.minimum_access_level == AccessTier.PENDING)
+                item.is_premium_access = (user_level >= item.minimum_access_level) and (item.minimum_access_level == AccessTier.PURCHASED)
                 item.is_waiting_admin = (user_level < item.minimum_access_level) and (user_level == AccessTier.PENDING)
                 item.is_locked = (user_level < item.minimum_access_level) and (user_level != AccessTier.PENDING)
                 playlist_list.append(item)

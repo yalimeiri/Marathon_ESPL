@@ -270,6 +270,8 @@
                     <span class="badge-premium">🔒 Premium</span>
                     {% elif video.is_free_preview %}
                     <span class="badge-free">🔓 Free Preview</span>
+                    {% elif video.is_premium_access %}
+                    <span class="badge-premium" style="background: #059669; color: #d1fae5;">💎 Premium</span>
                     {% endif %}
                 </div>
                 {% if video.description %}
