@@ -631,7 +631,7 @@
                 }
 
                 function updateVolIcon() {
-                    if (videoElement.muted || videoElement.volume === 0) volBtn.textContent = '🔇';
+                    if (videoElement.muted || videoElement.volume === 0) volBtn.textContent = '';
                     else if (videoElement.volume < 0.5) volBtn.textContent = '🔉';
                     else volBtn.textContent = '🔊';
                 }
