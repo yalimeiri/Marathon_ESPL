@@ -231,7 +231,7 @@ class PaymentView(LoginRequiredMixin, DetailView):
         config = SiteConfiguration.get_solo()
         bot_token = config.telegram_bot_token or settings.TELEGRAM_BOT_TOKEN
         chat_id = config.telegram_chat_id or settings.TELEGRAM_CHAT_ID
-        text_message = f"New Pending User: {payer_name} ({phone_number}) claims he paid 100 NIS.\nCourse: {category.name}"
+        text_message = f"New Pending User: {payer_name} ({phone_number}) claims he paid {category.price} NIS.\nCourse: {category.name}"
         
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {

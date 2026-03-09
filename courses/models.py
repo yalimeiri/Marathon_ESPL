@@ -124,6 +124,7 @@ class Category(models.Model):
 
     name = models.CharField(max_length=200, unique=True, verbose_name="Category Name")
     description = models.TextField(blank=True, verbose_name="Description")
+    price = models.IntegerField(default=100, verbose_name="Price (NIS)", help_text="Set the price in NIS for this course.")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
