@@ -369,9 +369,11 @@
 
         // Play in place without exiting fullscreen SPA magic
         async function playNextVideoInPlace(nextUrl) {
+            console.log("SPA Transition: Attempting to play next video at URL:", nextUrl);
             if (!nextUrl) return;
             try {
                 const res = await fetch(nextUrl);
+                console.log("SPA Transition: Fetch response status:", res.status);
                 const html = await res.text();
                 const doc = new DOMParser().parseFromString(html, 'text/html');
 
@@ -383,7 +385,10 @@
                 if (newDesc) document.getElementById('video-description-container').innerHTML = newDesc.innerHTML;
 
                 const newSidebar = doc.getElementById('sidebar-playlist-container');
-                if (newSidebar) document.getElementById('sidebar-playlist-container').innerHTML = newSidebar.innerHTML;
+                if (newSidebar) {
+                    document.getElementById('sidebar-playlist-container').innerHTML = newSidebar.innerHTML;
+                    console.log("SPA Transition: Updated DOM (Title, Desc, Sidebar)");
+                }
 
                 // Re-apply toggle preference if loaded from response
                 const toggler = document.getElementById('autoplay-toggle');
@@ -393,26 +398,37 @@
 
                 const newVideoEl = doc.getElementById('main-video-player');
                 if (!newVideoEl) {
-                    // Normal hard redirection if next chapter is Locked or Waiting Admin
+                    console.warn("SPA Transition: No main-video-player found in next page. Hard navigating...");
                     window.location.href = nextUrl;
                     return;
                 }
 
                 const newSrc = newVideoEl.getAttribute('data-video-src');
                 const newNextUrl = newVideoEl.getAttribute('data-next-url');
+
+                console.log("SPA Transition: New Video Src:", newSrc);
+                console.log("SPA Transition: New Next URL:", newNextUrl);
+
+                // Update our current videoElement
                 videoElement.setAttribute('data-next-url', newNextUrl || '');
                 videoElement.setAttribute('data-video-src', newSrc || '');
 
                 if (newSrc) {
-                    if (window.hlsInstance) window.hlsInstance.destroy();
+                    if (window.hlsInstance) {
+                        console.log("SPA Transition: Destroying old HLS instance");
+                        window.hlsInstance.destroy();
+                    }
                     if (newSrc.endsWith('.m3u8') && typeof Hls !== 'undefined' && Hls.isSupported()) {
+                        console.log("SPA Transition: Mounting new HLS source");
                         window.hlsInstance = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
                         window.hlsInstance.loadSource(newSrc);
                         window.hlsInstance.attachMedia(videoElement);
                     } else {
+                        console.log("SPA Transition: Setting native video.src");
                         videoElement.src = newSrc;
                     }
-                    videoElement.play().catch(e => console.error("Autoplay prevents execution: ", e));
+                    console.log("SPA Transition: Calling video.play()");
+                    videoElement.play().catch(e => console.error("SPA Transition Play Error:", e));
                 }
 
                 history.pushState({}, "", nextUrl);
