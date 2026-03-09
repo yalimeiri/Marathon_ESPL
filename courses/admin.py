@@ -22,7 +22,7 @@ from .models import Category, Subcategory, Video, Purchase, CategoryAccess, Site
 
 @admin.register(Subcategory)
 class SubcategoryAdmin(SortableAdminMixin, admin.ModelAdmin):
-    list_display = ("title", "category", "order")
+    list_display = ("title", "category")
     list_filter = ("category",)
     search_fields = ("title", "description", "category__name")
     save_on_top = True
@@ -106,7 +106,7 @@ class SubcategoryInline(SortableStackedInline):
 
 @admin.register(Category)
 class CategoryAdmin(SortableAdminMixin, SortableAdminBase, admin.ModelAdmin):
-    list_display = ("name", "price", "video_count", "order", "created_at")
+    list_display = ("name", "price", "video_count", "created_at")
     search_fields = ("name",)
     inlines = [SubcategoryInline]
     save_on_top = True
@@ -135,7 +135,6 @@ class VideoAdmin(SortableAdminMixin, admin.ModelAdmin):
         "title",
         "category",
         "subcategory",
-        "order",
         "minimum_access_level",
         "is_published",
         "file_link",
