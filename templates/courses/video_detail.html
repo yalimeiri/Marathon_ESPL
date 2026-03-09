@@ -330,7 +330,7 @@
     document.addEventListener("DOMContentLoaded", function () {
         const videoElement = document.getElementById("main-video-player");
         if (videoElement) {
-            const videoSrc = "{% if url %}{{ url|escapejs }}{% elif video.file %}{{ video.file.url|escapejs }}{% endif %}";
+            const videoSrc = "{% if video.video_url %}{{ video.video_url|escapejs }}{% elif video.file %}{{ video.file.url|escapejs }}{% endif %}";
             if (videoSrc) {
                 if (videoSrc.endsWith('.m3u8') && Hls.isSupported()) {
                     const hls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
