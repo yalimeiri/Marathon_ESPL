@@ -125,12 +125,13 @@ class Category(models.Model):
     name = models.CharField(max_length=200, unique=True, verbose_name="Category Name")
     description = models.TextField(blank=True, verbose_name="Description")
     price = models.IntegerField(default=100, verbose_name="Price (NIS)", help_text="Set the price in NIS for this course.")
+    order = models.PositiveIntegerField(default=0, blank=False, null=False, verbose_name="Order", help_text="Display order (drag-and-drop in Admin).")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Category"
         verbose_name_plural = "Categories"
-        ordering = ["name"]
+        ordering = ["order", "name"]
 
     def __str__(self):
         return self.name
@@ -149,7 +150,7 @@ class Subcategory(models.Model):
     )
     title = models.CharField(max_length=200, verbose_name="Subcategory Title")
     description = models.TextField(blank=True, verbose_name="Description")
-    order = models.IntegerField(default=0, verbose_name="Order")
+    order = models.PositiveIntegerField(default=0, blank=False, null=False, verbose_name="Order")
 
     class Meta:
         verbose_name = "Subcategory"
@@ -240,7 +241,7 @@ class Video(models.Model):
     class Meta:
         verbose_name = "Video"
         verbose_name_plural = "Videos"
-        ordering = ["category", "order", "title"]
+        ordering = ["order", "title"]
 
     def __str__(self):
         return f"{self.title} [{self.category}]"

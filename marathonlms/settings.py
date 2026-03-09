@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     # Third-party
     "anymail",
     "storages",
+    "adminsortable2",
     # Project apps
     "accounts.apps.AccountsConfig",
     "courses.apps.CoursesConfig",

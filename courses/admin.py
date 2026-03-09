@@ -16,10 +16,12 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
 
+from adminsortable2.admin import SortableAdminMixin, SortableAdminBase, SortableStackedInline
+
 from .models import Category, Subcategory, Video, Purchase, CategoryAccess, SiteConfiguration
 
 @admin.register(Subcategory)
-class SubcategoryAdmin(admin.ModelAdmin):
+class SubcategoryAdmin(SortableAdminMixin, admin.ModelAdmin):
     list_display = ("title", "category", "order")
     list_filter = ("category",)
     search_fields = ("title", "description", "category__name")
@@ -86,20 +88,26 @@ class CategoryAccessAdmin(admin.ModelAdmin):
         return False
 
 
-class VideoInline(admin.TabularInline):
-    """Shows videos directly inside the Category admin page."""
+class VideoInline(SortableStackedInline):
+    """Shows videos directly inside the Subcategory admin page."""
 
     model = Video
     extra = 1
-    fields = ("title", "file", "order", "is_published")
-    ordering = ("order",)
+    fields = ("title", "file", "is_published")
+
+class SubcategoryInline(SortableStackedInline):
+    """Shows subcategories directly inside the Category admin page."""
+
+    model = Subcategory
+    extra = 1
+    fields = ("title", "description")
 
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "price", "video_count", "created_at")
+class CategoryAdmin(SortableAdminMixin, SortableAdminBase, admin.ModelAdmin):
+    list_display = ("name", "price", "video_count", "order", "created_at")
     search_fields = ("name",)
-    inlines = [VideoInline]
+    inlines = [SubcategoryInline]
 
     @admin.display(description="# Videos")
     def video_count(self, obj):
@@ -117,13 +125,14 @@ def unpublish_videos(modeladmin, request, queryset):
 
 
 @admin.register(Video)
-class VideoAdmin(admin.ModelAdmin):
+class VideoAdmin(SortableAdminMixin, admin.ModelAdmin):
     change_form_template = "admin/courses/video/change_form.html"
     actions = [publish_videos, unpublish_videos]
 
     list_display = (
         "title",
         "category",
+        "subcategory",
         "order",
         "minimum_access_level",
         "is_published",
@@ -131,10 +140,9 @@ class VideoAdmin(admin.ModelAdmin):
         "created_at",
     )
     list_display_links = ("title",)
-    list_editable = ("order", "minimum_access_level", "is_published")
-    list_filter = ("category", "minimum_access_level", "is_published")
+    list_editable = ("minimum_access_level", "is_published")
+    list_filter = ("category", "subcategory", "minimum_access_level", "is_published")
     search_fields = ("title", "description")
-    ordering = ("category", "order")
 
     fieldsets = (
         (None, {
