@@ -142,7 +142,7 @@ class Video(models.Model):
 
     ``file`` uses Django's FileField so that:
       • In dev:  files land in MEDIA_ROOT/videos/
-      • In prod: the storage backend (S3 / Cloudinary) takes over transparently
+      • In prod: the storage backend takes over transparently
                  when you switch STORAGES in settings.py.
 
     ``order`` controls the display sequence within a category (0 = first).
@@ -162,17 +162,17 @@ class Video(models.Model):
         blank=True,
         null=True,
     )
-    cloudinary_url = models.URLField(
+    video_url = models.URLField(
         max_length=500,
         blank=True,
-        verbose_name="Cloudinary URL",
-        help_text="Populated automatically by the Upload Manager, or paste manually.",
+        verbose_name="Video URL",
+        help_text="Populated automatically by the Upload Manager, or paste external URL manually.",
     )
-    public_id = models.CharField(
+    bunny_video_id = models.CharField(
         max_length=200,
         blank=True,
-        verbose_name="Cloudinary Public ID",
-        help_text="Set automatically by the Upload Manager.",
+        verbose_name="Bunny Video ID",
+        help_text="Set automatically by the Upload Manager to track API status.",
     )
     category = models.ForeignKey(
         Category,

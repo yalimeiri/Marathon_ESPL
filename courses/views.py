@@ -371,7 +371,9 @@ def upload_video_page(request):
     categories = Category.objects.order_by("name")
     context = {
         "categories": categories,
-        "cloudinary_cloud_name": settings.CLOUDINARY_CLOUD_NAME,
+        "bunny_library_id": getattr(settings, "BUNNY_LIBRARY_ID", ""),
+        "bunny_api_key": getattr(settings, "BUNNY_API_KEY", ""),
+        "bunny_pull_zone": getattr(settings, "BUNNY_PULL_ZONE", ""),
     }
     return render(request, "courses/upload_video.html", context)
 
@@ -385,15 +387,15 @@ def save_video(request):
     Receives the Cloudinary upload result (JSON fields) and saves a Video record.
     """
     title = request.POST.get("title", "").strip()
-    cloudinary_url = request.POST.get("cloudinary_url", "").strip()
-    public_id = request.POST.get("public_id", "").strip()
+    video_url = request.POST.get("video_url", "").strip()
+    bunny_video_id = request.POST.get("bunny_video_id", "").strip()
     category_id = request.POST.get("category_id", "").strip()
     description = request.POST.get("description", "").strip()
     order = request.POST.get("order", "0").strip()
     is_published = request.POST.get("is_published") == "on"
 
-    if not title or not cloudinary_url:
-        messages.error(request, "Title and Cloudinary URL are required.")
+    if not title or not video_url:
+        messages.error(request, "Title and Video URL are required.")
         return redirect("courses:upload-video")
 
     category = None
@@ -402,8 +404,8 @@ def save_video(request):
 
     Video.objects.create(
         title=title,
-        cloudinary_url=cloudinary_url,
-        public_id=public_id,
+        video_url=video_url,
+        bunny_video_id=bunny_video_id,
         category=category,
         description=description,
         order=int(order) if order.isdigit() else 0,

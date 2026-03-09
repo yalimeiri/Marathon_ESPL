@@ -167,15 +167,18 @@
     {% endfor %}
     {% endif %}
 
-    <!-- Step 1: Upload to Cloudinary -->
-    <h3 style="color:#a5b4fc;margin-bottom:12px;">Step 1 — Upload Video to Cloudinary</h3>
-    <button id="upload-btn" class="upload-btn" onclick="openWidget()">
+    <!-- Step 1: Upload to Bunny.net -->
+    <h3 style="color:#a5b4fc;margin-bottom:12px;">Step 1 — Upload Video to Bunny.net</h3>
+    <input type="file" id="video-file-input" accept="video/mp4,video/x-m4v,video/*" style="display:none;"
+        onchange="startBunnyUpload()">
+    <button type="button" id="upload-btn" class="upload-btn"
+        onclick="document.getElementById('video-file-input').click()">
         ☁️ Choose & Upload Video
     </button>
 
     <!-- Upload status -->
     <div id="status-box" class="status-box">
-        <div class="label">✅ Upload successful! Cloudinary URL:</div>
+        <div class="label">✅ Upload successful! Video URL:</div>
         <div id="url-display" class="url-text"></div>
     </div>
 
@@ -185,9 +188,9 @@
     <form method="POST" action="{% url 'courses:save-video' %}" id="video-form">
         {% csrf_token %}
 
-        <!-- Hidden Cloudinary fields (auto-filled by JS) -->
-        <input type="hidden" name="cloudinary_url" id="cloudinary_url">
-        <input type="hidden" name="public_id" id="public_id">
+        <!-- Hidden fields for Bunny payload -->
+        <input type="hidden" name="video_url" id="video_url">
+        <input type="hidden" name="bunny_video_id" id="bunny_video_id">
 
         <div class="form-group">
             <label>Video Title *</label>
@@ -225,62 +228,90 @@
     </form>
 </div>
 
-<!-- Cloudinary Upload Widget -->
-<script src="https://widget.cloudinary.com/v2.0/global/all.js" type="text/javascript"></script>
+<!-- Bunny.net Native JS Uploader -->
 <script>
-    var widget = cloudinary.createUploadWidget(
-        {
-            cloudName: "{{ cloudinary_cloud_name }}",
-            uploadPreset: "marathon_unsigned",   // unsigned preset — create in Cloudinary settings
-            resourceType: "video",
-            maxFileSize: 1073741824,       // 1 GB limit
-            chunk_size: 6000000,
-            clientAllowedFormats: ["mp4", "mov", "webm", "mkv", "avi"],
-            sources: ["local", "url", "dropbox", "google_drive"],
-            showAdvancedOptions: false,
-            cropping: false,
-            multiple: false,
-            defaultSource: "local",
-            styles: {
-                palette: {
-                    window: "#1e1b4b",
-                    windowBorder: "#6366f1",
-                    tabIcon: "#6366f1",
-                    menuIcons: "#94a3b8",
-                    textDark: "#1e1b4b",
-                    textLight: "#e2e8f0",
-                    link: "#6366f1",
-                    action: "#6366f1",
-                    inactiveTabIcon: "#475569",
-                    error: "#ef4444",
-                    inProgress: "#6366f1",
-                    complete: "#22c55e",
-                    sourceBg: "#0f1117",
-                },
-            },
-        },
-        function (error, result) {
-            if (!error && result && result.event === "success") {
-                var info = result.info;
-                // Populate hidden form fields
-                document.getElementById("cloudinary_url").value = info.secure_url;
-                document.getElementById("public_id").value = info.public_id;
-                // Show status
-                document.getElementById("url-display").textContent = info.secure_url;
-                document.getElementById("status-box").classList.add("visible");
-                // Enable save button
-                document.getElementById("save-btn").disabled = false;
-                document.getElementById("upload-btn").textContent = "✅ Uploaded — change video";
-            }
-            if (error) {
-                console.error("Cloudinary error full:", error);
-                alert("Upload error details:\n" + JSON.stringify(error, null, 2));
-            }
-        }
-    );
+    const libraryId = "{{ bunny_library_id }}";
+    const apiKey = "{{ bunny_api_key }}";
+    const pullZone = "{{ bunny_pull_zone }}";
 
-    function openWidget() {
-        widget.open();
+    async function startBunnyUpload() {
+        const fileInput = document.getElementById('video-file-input');
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        const uploadBtn = document.getElementById('upload-btn');
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = "⏳ Creating Video Entry (0%)...";
+
+        try {
+            // 1. Create a placeholder video object in Bunny Library
+            const createRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
+                method: "POST",
+                headers: {
+                    "AccessKey": apiKey,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ title: file.name })
+            });
+
+            if (!createRes.ok) throw new Error("Failed to create video entry.");
+            const createData = await createRes.json();
+            const videoId = createData.guid;
+
+            // 2. Upload the file using XMLHttpRequest for progress tracking
+            const xhr = new XMLHttpRequest();
+            xhr.open("PUT", `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, true);
+            xhr.setRequestHeader("AccessKey", apiKey);
+            xhr.setRequestHeader("Content-Type", "application/octet-stream");
+
+            xhr.upload.onprogress = function (e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    uploadBtn.textContent = `⏳ Uploading ${percentComplete}%...`;
+                }
+            };
+
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Bunny requires a short processing time, but the URL structure is predictable:
+                    const finalUrl = `https://${pullZone}/${videoId}/playlist.m3u8`;
+
+                    document.getElementById("video_url").value = finalUrl;
+                    document.getElementById("bunny_video_id").value = videoId;
+
+                    document.getElementById("url-display").textContent = finalUrl;
+                    document.getElementById("status-box").classList.add("visible");
+
+                    document.getElementById("save-btn").disabled = false;
+
+                    // If the user hasn't typed a title yet, auto-fill it from filename
+                    const titleInput = document.querySelector('input[name="title"]');
+                    if (titleInput && !titleInput.value) {
+                        titleInput.value = file.name.replace(/\.[^/.]+$/, ""); // Strip extension
+                    }
+
+                    uploadBtn.textContent = "✅ Uploaded — Change Video";
+                    uploadBtn.disabled = false;
+                } else {
+                    alert("Upload failed: " + xhr.statusText);
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = "☁️ Choose & Upload Video";
+                }
+            };
+
+            xhr.onerror = function () {
+                alert("Network error during upload.");
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = "☁️ Choose & Upload Video";
+            };
+
+            xhr.send(file);
+        } catch (error) {
+            console.error(error);
+            alert("Error: " + error.message);
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = "☁️ Choose & Upload Video";
+        }
     }
 </script>
 {% endblock %}

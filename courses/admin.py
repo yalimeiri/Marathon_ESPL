@@ -128,7 +128,7 @@ class VideoAdmin(admin.ModelAdmin):
             "fields": ("title", "category", "subcategory", "order", "minimum_access_level", "is_published"),
         }),
         ("Content", {
-            "fields": ("file", "cloudinary_url", "public_id", "description"),
+            "fields": ("file", "video_url", "bunny_video_id", "description"),
         }),
         ("Timestamps", {
             "classes": ("collapse",),
@@ -150,6 +150,7 @@ class VideoAdmin(admin.ModelAdmin):
         """
         from django.conf import settings
         context.update({
-            'cloudinary_cloud_name': getattr(settings, 'CLOUDINARY_CLOUD_NAME', '')
+            'bunny_library_id': getattr(settings, 'BUNNY_LIBRARY_ID', ''),
+            'bunny_api_key': getattr(settings, 'BUNNY_API_KEY', ''),
         })
         return super().render_change_form(request, context, add=add, change=change, form_url=form_url, obj=obj)

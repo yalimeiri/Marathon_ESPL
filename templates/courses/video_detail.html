@@ -68,8 +68,8 @@
 
         {% if video.cloudinary_url or video.file %}
 
-        <!-- Native MP4 / Cloudinary -> Features Custom Zoom & Fullscreen -->
-        {% with url=video.cloudinary_url|default_if_none:"" %}
+        <!-- Native MP4 / Bunny Stream -> Features Custom Zoom & Fullscreen -->
+        {% with url=video.video_url|default_if_none:"" %}
         {% if "youtube.com" not in url and "youtu.be" not in url and "drive.google.com" not in url %}
         <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:12px;" id="zoom-hint-text">
             🖱️ <strong>לתשומת ליבכם:</strong> ניתן להגדיל ולהקטין את התמונה בעזרת העכבר 💡
@@ -114,7 +114,7 @@
             </div>
 
             {% else %}
-            {% with url=video.cloudinary_url|default_if_none:"" %}
+            {% with url=video.video_url|default_if_none:"" %}
             {% if "youtube.com/embed/" in url %}
             {# ── YouTube /embed/ URL — use directly ─────────────────────────── #}
             <iframe src="{{ url }}" style="width:100%;height:100%;position:absolute;top:0;left:0;border:0;"
@@ -146,7 +146,7 @@
             </iframe>
             {% endif %}
             {% elif url or video.file %}
-            {# ── Cloudinary / direct MP4 ──────────────────────────────────── #}
+            {# ── Bunny Stream / direct MP4 ──────────────────────────────────── #}
             <div id="video-zoom-container"
                 style="width:100%;height:100%;overflow:hidden;position:relative;background:#000;">
 
@@ -156,7 +156,6 @@
                     <!-- Hide native controls so we can fully control the experience -->
                     <video id="main-video-player" controlsList="nodownload" oncontextmenu="return false;"
                         style="width:100%;height:100%;display:block;" preload="metadata" playsinline>
-                        <source src="{% if url %}{{ url }}{% else %}{{ video.file.url }}{% endif %}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
                 </div>
@@ -316,10 +315,25 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const autoplayToggle = document.getElementById("autoplay-toggle");
         const videoElement = document.getElementById("main-video-player");
+        if (videoElement) {
+            const videoSrc = "{% if url %}{{ url|escapejs }}{% elif video.file %}{{ video.file.url|escapejs }}{% endif %}";
+            if (videoSrc) {
+                if (videoSrc.endsWith('.m3u8') && Hls.isSupported()) {
+                    const hls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
+                    hls.loadSource(videoSrc);
+                    hls.attachMedia(videoElement);
+                } else {
+                    videoElement.src = videoSrc;
+                }
+            }
+        }
+
+
+        const autoplayToggle = document.getElementById("autoplay-toggle");
         const autoplayToast = document.getElementById("autoplay-toast");
         const countdownElement = document.getElementById("autoplay-countdown");
         const btnCancelAutoplay = document.getElementById("btn-cancel-autoplay");

@@ -3,81 +3,122 @@
 {% block after_field_sets %}
 {{ block.super }}
 
-<!-- Custom Cloudinary Upload Widget Injection -->
+<!-- Custom Bunny.net Upload Widget Injection -->
 <div
     style="margin: 20px 0; padding: 20px; background: #e0f2fe; border: 2px dashed #38bdf8; border-radius: 8px; text-align: center;">
-    <h3 style="margin-top: 0; color: #0284c7; font-size: 1.2rem;">☁️ Direct Cloudinary Video Upload</h3>
+    <h3 style="margin-top: 0; color: #0284c7; font-size: 1.2rem;">☁️ Direct Bunny.net Video Upload</h3>
     <p
         style="color: #0369a1; margin-bottom: 15px; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-        Uploading massive video files (e.g. 50MB+) through standard Django file inputs will often crash the server due
-        to timeout or payload size limits.
-        Use this button instead to safely upload directly from your browser to Cloudinary's cloud storage.
+        Uploading massive video files (e.g. 50MB+) through standard Django file inputs will often crash the server.
+        Use this button instead to safely upload directly from your browser to Bunny Stream storage.
     </p>
 
-    <button type="button" id="cloudinary_admin_upload_btn"
+    <input type="file" id="admin-bunny-upload" accept="video/mp4,video/x-m4v,video/*" style="display:none;"
+        onchange="startAdminBunnyUpload()">
+    <button type="button" id="bunny_admin_upload_btn" onclick="document.getElementById('admin-bunny-upload').click()"
         style="background: #0ea5e9; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background-color 0.2s;">
-        Upload Video via Cloudinary
+        Upload Video via Bunny.net
     </button>
 
     <p style="margin-top: 15px; font-size: 0.85rem; color: #0284c7;">
-        Once the upload finishes, the <strong>Cloudinary URL</strong> and <strong>Public ID</strong> fields above will
+        Once the upload finishes, the <strong>Video URL</strong> and <strong>Bunny ID</strong> fields above will
         be populated automatically.<br>
         <strong>⚠️ Don't forget to press "Save" at the bottom of the page!</strong>
     </p>
 </div>
 
-<script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
 <script type="text/javascript">
-    document.addEventListener('DOMContentLoaded', function () {
-        var myWidget = cloudinary.createUploadWidget({
-            cloudName: '{{ cloudinary_cloud_name }}',
-            uploadPreset: 'marathon_unsigned',
-            resourceType: 'video',
-            maxFileSize: 1073741824, // 1GB limit
-            chunk_size: 6000000,
-            clientAllowedFormats: ['mp4', 'mov', 'webm', 'mkv', 'avi'],
-            sources: ['local', 'url', 'google_drive'],
-            multiple: false
-        }, (error, result) => {
-            if (!error && result && result.event === "success") {
-                console.log('Admin Cloudinary Upload Success: ', result.info);
+    async function startAdminBunnyUpload() {
+        const fileInput = document.getElementById('admin-bunny-upload');
+        const file = fileInput.files[0];
+        if (!file) return;
 
-                // Populate the admin fields
-                var urlField = document.getElementById('id_cloudinary_url');
-                var publicIdField = document.getElementById('id_public_id');
+        const uploadBtn = document.getElementById('bunny_admin_upload_btn');
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = "⏳ Creating Video Entry...";
 
-                if (urlField) {
-                    urlField.value = result.info.secure_url;
-                    // Flash background to indicate change
-                    urlField.style.backgroundColor = "#bbf7d0";
-                    setTimeout(() => urlField.style.backgroundColor = "", 1500);
+        const libraryId = '{{ bunny_library_id }}';
+        const apiKey = '{{ bunny_api_key }}';
+        const pullZone = '{{ bunny_pull_zone }}';
+
+        try {
+            // 1. Create entry
+            const createRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
+                method: "POST",
+                headers: { "AccessKey": apiKey, "Content-Type": "application/json" },
+                body: JSON.stringify({ title: file.name })
+            });
+
+            if (!createRes.ok) throw new Error("Failed to create video record in Bunny.");
+            const createData = await createRes.json();
+            const videoId = createData.guid;
+
+            // 2. Upload file
+            const xhr = new XMLHttpRequest();
+            xhr.open("PUT", `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, true);
+            xhr.setRequestHeader("AccessKey", apiKey);
+            xhr.setRequestHeader("Content-Type", "application/octet-stream");
+
+            xhr.upload.onprogress = function (e) {
+                if (e.lengthComputable) {
+                    const pct = Math.round((e.loaded / e.total) * 100);
+                    uploadBtn.textContent = `⏳ Uploading ${pct}%`;
                 }
-                if (publicIdField) {
-                    publicIdField.value = result.info.public_id;
-                    publicIdField.style.backgroundColor = "#bbf7d0";
-                    setTimeout(() => publicIdField.style.backgroundColor = "", 1500);
+            };
+
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    const finalUrl = `https://${pullZone}/${videoId}/playlist.m3u8`;
+
+                    try {
+                        var urlField = document.getElementById('id_video_url');
+                        var publicIdField = document.getElementById('id_bunny_video_id');
+
+                        if (urlField) {
+                            urlField.value = finalUrl;
+                            urlField.style.backgroundColor = "#bbf7d0";
+                            setTimeout(() => urlField.style.backgroundColor = "", 1500);
+                        }
+                        if (publicIdField) {
+                            publicIdField.value = videoId;
+                            publicIdField.style.backgroundColor = "#bbf7d0";
+                            setTimeout(() => publicIdField.style.backgroundColor = "", 1500);
+                        }
+
+                        var titleField = document.getElementById('id_title');
+                        if (titleField && !titleField.value) {
+                            var name = file.name.replace(/\.[^/.]+$/, "");
+                            name = name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                            titleField.value = name;
+                        }
+
+                        alert('✅ Video successfully uploaded!\n\nThe Bunny.net URL has been auto-filled. Please scroll down and press "Save" to commit these changes.');
+                    } catch (err) {
+                        console.error(err);
+                    }
+
+                    uploadBtn.textContent = "✅ Uploaded — Change Video";
+                    uploadBtn.disabled = false;
+                } else {
+                    alert('Upload failed: ' + xhr.statusText);
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = "Upload Video via Bunny.net";
                 }
+            };
 
-                // If title is empty, prefill it with the original filename
-                var titleField = document.getElementById('id_title');
-                if (titleField && !titleField.value) {
-                    var name = result.info.original_filename;
-                    // Replace underscores and properly capitalize
-                    name = name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    titleField.value = name;
-                }
+            xhr.onerror = function () {
+                alert('Network Error during upload.');
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = "Upload Video via Bunny.net";
+            };
 
-                alert('✅ Video successfully uploaded and parsed!\n\nThe Cloudinary URL fields have been auto-filled. Please scroll down and press "Save" to commit these changes to the database.');
-            }
-        });
-
-        var btn = document.getElementById("cloudinary_admin_upload_btn");
-        if (btn) {
-            btn.addEventListener("click", function (e) {
-                e.preventDefault(); // Prevent accidental form submission
-                myWidget.open();
-            }, false);
+            xhr.send(file);
+        } catch (e) {
+            console.error(e);
+            alert("Upload error: " + e.message);
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = "Upload Video via Bunny.net";
         }
-    });
+    }
 </script>
 {% endblock %}

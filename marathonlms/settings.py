@@ -225,29 +225,10 @@ MEDIA_ROOT = BASE_DIR / "media"
 #     }
 #
 #
-#  ── Cloudinary (activate by setting CLOUDINARY_URL in Railway Variables) ────
-#
-CLOUDINARY_CLOUD_NAME = config("CLOUDINARY_CLOUD_NAME", default="")
-USE_CLOUDINARY = config("USE_CLOUDINARY", default=False, cast=bool)
-if USE_CLOUDINARY:
-    import cloudinary
-    cloudinary.config(
-        cloud_name=CLOUDINARY_CLOUD_NAME,
-        api_key=config("CLOUDINARY_API_KEY"),
-        api_secret=config("CLOUDINARY_API_SECRET"),
-        secure=True,
-    )
-    INSTALLED_APPS += ["cloudinary_storage", "cloudinary"]
-    # Only route MEDIA (FileField uploads) to Cloudinary.
-    # Static files stay on local filesystem served by WhiteNoise middleware.
-    STORAGES = {
-        "default": {
-            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-        },
-    }
+# ── Bunny.net Stream ────────────────────────────────────────────────────────
+BUNNY_LIBRARY_ID = config("BUNNY_LIBRARY_ID", default="613751")
+BUNNY_API_KEY = config("BUNNY_API_KEY", default="dc69dcf6-6ef3-496e-b48e29576f4d-77ee-4632")
+BUNNY_PULL_ZONE = config("BUNNY_PULL_ZONE", default="vz-0925fbfa-20e.b-cdn.net")
 
 
 # ── Device Lock ─────────────────────────────────────────────────────────────
