@@ -52,7 +52,7 @@ class CategoryListView(LoginRequiredMixin, ListView):
     model = Category
     template_name = "courses/category_list.html"
     context_object_name = "categories"
-    ordering = ["name"]
+    ordering = ["order", "name"]
 
 
 class VideoListView(LoginRequiredMixin, ListView):
