@@ -54,19 +54,29 @@
         <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
             <h1 style="font-size:1.8rem;color:#c7d2fe;margin:0;">{{ video.title }}</h1>
             {% if video.is_temp_access %}
-            <span style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#475569; color:#cbd5e1; white-space:nowrap;">✅ Temp Access</span>
+            <span
+                style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#475569; color:#cbd5e1; white-space:nowrap;">✅
+                Temp Access</span>
             {% elif video.is_waiting_admin %}
-            <span style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#334155; color:#94a3b8; white-space:nowrap;">⏳ Waiting for Admin</span>
+            <span
+                style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#334155; color:#94a3b8; white-space:nowrap;">⏳
+                Waiting for Admin</span>
             {% elif video.is_locked %}
-            <span style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#334155; color:#94a3b8; white-space:nowrap;">🔒 Premium</span>
+            <span
+                style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#334155; color:#94a3b8; white-space:nowrap;">🔒
+                Premium</span>
             {% elif video.is_free_preview %}
-            <span style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#059669; color:#d1fae5; white-space:nowrap;">🔓 Free Preview</span>
+            <span
+                style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#059669; color:#d1fae5; white-space:nowrap;">🔓
+                Free Preview</span>
             {% elif video.is_premium_access %}
-            <span style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#059669; color:#d1fae5; white-space:nowrap;">💎 Premium</span>
+            <span
+                style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#059669; color:#d1fae5; white-space:nowrap;">💎
+                Premium</span>
             {% endif %}
         </div>
 
-        {% if video.cloudinary_url or video.file %}
+        {% if video.video_url or video.file %}
 
         <!-- Native MP4 / Bunny Stream -> Features Custom Zoom & Fullscreen -->
         {% with url=video.video_url|default_if_none:"" %}
