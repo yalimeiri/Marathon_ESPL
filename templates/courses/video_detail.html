@@ -332,12 +332,14 @@
     document.addEventListener("DOMContentLoaded", function () {
         const videoElement = document.getElementById("main-video-player");
         if (videoElement) {
-            const initialVideoSrc = videoElement.getAttribute('data-video-src');
+            const initialVideoSrc = (videoElement.getAttribute('data-video-src') || '').trim();
             if (initialVideoSrc) {
                 if (initialVideoSrc.endsWith('.m3u8') && typeof Hls !== 'undefined' && Hls.isSupported()) {
                     window.hlsInstance = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
-                    window.hlsInstance.loadSource(initialVideoSrc);
                     window.hlsInstance.attachMedia(videoElement);
+                    window.hlsInstance.on(Hls.Events.MEDIA_ATTACHED, function () {
+                        window.hlsInstance.loadSource(initialVideoSrc);
+                    });
                 } else {
                     videoElement.src = initialVideoSrc;
                 }
@@ -403,8 +405,8 @@
                     return;
                 }
 
-                const newSrc = newVideoEl.getAttribute('data-video-src');
-                const newNextUrl = newVideoEl.getAttribute('data-next-url');
+                const newSrc = (newVideoEl.getAttribute('data-video-src') || '').trim();
+                const newNextUrl = (newVideoEl.getAttribute('data-next-url') || '').trim();
 
                 console.log("SPA Transition: New Video Src:", newSrc);
                 console.log("SPA Transition: New Next URL:", newNextUrl);
@@ -421,8 +423,10 @@
                     if (newSrc.endsWith('.m3u8') && typeof Hls !== 'undefined' && Hls.isSupported()) {
                         console.log("SPA Transition: Mounting new HLS source");
                         window.hlsInstance = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
-                        window.hlsInstance.loadSource(newSrc);
                         window.hlsInstance.attachMedia(videoElement);
+                        window.hlsInstance.on(Hls.Events.MEDIA_ATTACHED, function () {
+                            window.hlsInstance.loadSource(newSrc);
+                        });
                     } else {
                         console.log("SPA Transition: Setting native video.src");
                         videoElement.src = newSrc;
