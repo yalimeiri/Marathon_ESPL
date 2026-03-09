@@ -52,7 +52,7 @@
     <!-- LEFT: Main Video Content -->
     <div>
         <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-            <h1 style="font-size:1.8rem;color:#c7d2fe;margin:0;">{{ video.title }}</h1>
+            <h1 style="font-size:1.8rem;color:#c7d2fe;margin:0;" id="video-title">{{ video.title }}</h1>
             {% if video.is_temp_access %}
             <span
                 style="font-size:0.9rem; padding:4px 10px; border-radius:6px; background:#475569; color:#cbd5e1; white-space:nowrap;">✅
@@ -165,7 +165,9 @@
                     style="width:100%;height:100%;transform-origin:center center;transition:transform 0.2s ease-out;">
                     <!-- Hide native controls so we can fully control the experience -->
                     <video id="main-video-player" controlsList="nodownload" oncontextmenu="return false;"
-                        style="width:100%;height:100%;display:block;" preload="metadata" playsinline>
+                        data-video-src="{% if url %}{{ url|escapejs }}{% elif video.file %}{{ video.file.url|escapejs }}{% endif %}"
+                        data-next-url="{{ next_video_url|default:'' }}" style="width:100%;height:100%;display:block;"
+                        preload="metadata" playsinline>
                         Your browser does not support the video tag.
                     </video>
                 </div>
@@ -217,7 +219,6 @@
                         style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer; text-shadow:0 1px 3px rgba(0,0,0,0.5);">⛶</button>
                 </div>
 
-                {% if next_video_url %}
                 <!-- Autoplay Countdown Overlay -->
                 <div id="autoplay-toast"
                     style="display:none; position:absolute; bottom:80px; right:20px; z-index:30; background:rgba(15, 23, 42, 0.85); padding:12px 16px; border-radius:8px; backdrop-filter:blur(4px); border:1px solid #334155; align-items:center; gap:16px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
@@ -231,7 +232,6 @@
                     <button id="btn-cancel-autoplay"
                         style="background:#475569; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem; transition:background 0.2s;">Cancel</button>
                 </div>
-                {% endif %}
             </div>
 
             {% endif %}
@@ -243,10 +243,12 @@
         {% endif %}
 
         {% if video.description %}
-        <div
+        <div id="video-description-container"
             style="background:#1a1d27;border-left:3px solid #6366f1;padding:16px 20px;border-radius:8px;color:#94a3b8;">
             {{ video.description|linebreaks }}
         </div>
+        {% else %}
+        <div id="video-description-container"></div>
         {% endif %}
 
         {% if not video.is_published and request.user.is_staff %}
@@ -258,7 +260,7 @@
     </div>
 
     <!-- RIGHT: Sidebar Playlist -->
-    <div
+    <div id="sidebar-playlist-container"
         style="background:#1e293b; border-radius:12px; padding:16px; position:sticky; top:24px; max-height:85vh; overflow-y:auto; display:flex; flex-direction:column;">
         <div
             style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:12px; margin-bottom:16px;">
@@ -330,18 +332,17 @@
     document.addEventListener("DOMContentLoaded", function () {
         const videoElement = document.getElementById("main-video-player");
         if (videoElement) {
-            const videoSrc = "{% if video.video_url %}{{ video.video_url|escapejs }}{% elif video.file %}{{ video.file.url|escapejs }}{% endif %}";
-            if (videoSrc) {
-                if (videoSrc.endsWith('.m3u8') && Hls.isSupported()) {
-                    const hls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
-                    hls.loadSource(videoSrc);
-                    hls.attachMedia(videoElement);
+            const initialVideoSrc = videoElement.getAttribute('data-video-src');
+            if (initialVideoSrc) {
+                if (initialVideoSrc.endsWith('.m3u8') && typeof Hls !== 'undefined' && Hls.isSupported()) {
+                    window.hlsInstance = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
+                    window.hlsInstance.loadSource(initialVideoSrc);
+                    window.hlsInstance.attachMedia(videoElement);
                 } else {
-                    videoElement.src = videoSrc;
+                    videoElement.src = initialVideoSrc;
                 }
             }
         }
-
 
         const autoplayToggle = document.getElementById("autoplay-toggle");
         const autoplayToast = document.getElementById("autoplay-toast");
@@ -355,15 +356,77 @@
             if (localStorage.getItem("autoplay") === "false") {
                 autoplayToggle.checked = false;
             }
-            autoplayToggle.addEventListener("change", (e) => {
-                localStorage.setItem("autoplay", e.target.checked);
-                if (!e.target.checked && autoplayToast) {
-                    autoplayToast.style.display = "none";
+            // Bind body-level change explicitly for dynamic HTML updates replacing sidebar
+            document.body.addEventListener("change", (e) => {
+                if (e.target && e.target.id === 'autoplay-toggle') {
+                    localStorage.setItem("autoplay", e.target.checked);
+                    if (!e.target.checked && autoplayToast) {
+                        autoplayToast.style.display = "none";
+                    }
                 }
             });
         }
 
-        {% if next_video_url %}
+        // Play in place without exiting fullscreen SPA magic
+        async function playNextVideoInPlace(nextUrl) {
+            if (!nextUrl) return;
+            try {
+                const res = await fetch(nextUrl);
+                const html = await res.text();
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+
+                document.title = doc.title;
+                const newTitle = doc.getElementById('video-title');
+                if (newTitle) document.getElementById('video-title').innerHTML = newTitle.innerHTML;
+
+                const newDesc = doc.getElementById('video-description-container');
+                if (newDesc) document.getElementById('video-description-container').innerHTML = newDesc.innerHTML;
+
+                const newSidebar = doc.getElementById('sidebar-playlist-container');
+                if (newSidebar) document.getElementById('sidebar-playlist-container').innerHTML = newSidebar.innerHTML;
+
+                // Re-apply toggle preference if loaded from response
+                const toggler = document.getElementById('autoplay-toggle');
+                if (toggler && localStorage.getItem("autoplay") === "false") {
+                    toggler.checked = false;
+                }
+
+                const newVideoEl = doc.getElementById('main-video-player');
+                if (!newVideoEl) {
+                    // Normal hard redirection if next chapter is Locked or Waiting Admin
+                    window.location.href = nextUrl;
+                    return;
+                }
+
+                const newSrc = newVideoEl.getAttribute('data-video-src');
+                const newNextUrl = newVideoEl.getAttribute('data-next-url');
+                videoElement.setAttribute('data-next-url', newNextUrl || '');
+                videoElement.setAttribute('data-video-src', newSrc || '');
+
+                if (newSrc) {
+                    if (window.hlsInstance) window.hlsInstance.destroy();
+                    if (newSrc.endsWith('.m3u8') && typeof Hls !== 'undefined' && Hls.isSupported()) {
+                        window.hlsInstance = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
+                        window.hlsInstance.loadSource(newSrc);
+                        window.hlsInstance.attachMedia(videoElement);
+                    } else {
+                        videoElement.src = newSrc;
+                    }
+                    videoElement.play().catch(e => console.error("Autoplay prevents execution: ", e));
+                }
+
+                history.pushState({}, "", nextUrl);
+
+                if (autoplayToast) autoplayToast.style.display = "none";
+                autoplayCancelledThisSession = false;
+
+            } catch (err) {
+                console.error("AJAX navigation failed", err);
+                window.location.href = nextUrl;
+            }
+        }
+
+
         if (btnCancelAutoplay) {
             btnCancelAutoplay.addEventListener("click", () => {
                 autoplayCancelledThisSession = true;
@@ -373,7 +436,14 @@
 
         if (videoElement) {
             videoElement.addEventListener("timeupdate", function () {
-                if (autoplayToggle && !autoplayToggle.checked) return;
+                const currentNextUrl = videoElement.getAttribute('data-next-url');
+                if (!currentNextUrl) {
+                    if (autoplayToast) autoplayToast.style.display = "none";
+                    return;
+                }
+
+                const toggler = document.getElementById('autoplay-toggle');
+                if (toggler && !toggler.checked) return;
                 if (autoplayCancelledThisSession) return;
 
                 // Show countdown in the last 5 seconds
@@ -391,13 +461,16 @@
             });
 
             videoElement.addEventListener("ended", function () {
-                if (autoplayToggle && !autoplayToggle.checked) return;
+                const currentNextUrl = videoElement.getAttribute('data-next-url');
+                if (!currentNextUrl) return;
+
+                const toggler = document.getElementById('autoplay-toggle');
+                if (toggler && !toggler.checked) return;
                 if (autoplayCancelledThisSession) return;
 
-                window.location.href = "{{ next_video_url }}";
+                playNextVideoInPlace(currentNextUrl);
             });
         }
-        {% endif %}
     });
 </script>
 
