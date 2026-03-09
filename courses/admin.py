@@ -26,9 +26,6 @@ class SubcategoryAdmin(SortableAdminMixin, admin.ModelAdmin):
     list_filter = ("category",)
     search_fields = ("title", "description", "category__name")
     save_on_top = True
-
-    class Media:
-        js = ("admin/js/auto_save_sortable.js",)
     ordering = ("category", "order", "title")
 
 @admin.register(SiteConfiguration)
@@ -113,9 +110,6 @@ class CategoryAdmin(SortableAdminMixin, SortableAdminBase, admin.ModelAdmin):
     search_fields = ("name",)
     inlines = [SubcategoryInline]
     save_on_top = True
-
-    class Media:
-        js = ("admin/js/auto_save_sortable.js",)
 
     @admin.display(description="# Videos")
     def video_count(self, obj):
