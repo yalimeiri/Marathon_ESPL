@@ -230,6 +230,10 @@ BUNNY_LIBRARY_ID = config("BUNNY_LIBRARY_ID", default="613751")
 BUNNY_API_KEY = config("BUNNY_API_KEY", default="dc69dcf6-6ef3-496e-b48e29576f4d-77ee-4632")
 BUNNY_PULL_ZONE = config("BUNNY_PULL_ZONE", default="vz-0925fbfa-20e.b-cdn.net")
 
+# ── Telegram Webhook Settings ───────────────────────────────────────────────
+TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN", default="8227368106:AAEbSmIdTFRwy1QUoiuGMJGo8SM_Nfh5-BA")
+TELEGRAM_CHAT_ID = config("TELEGRAM_CHAT_ID", default="-5199045814")
+
 
 # ── Device Lock ─────────────────────────────────────────────────────────────
 DEVICE_COOKIE_NAME = "device_token"

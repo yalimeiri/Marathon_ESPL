@@ -228,8 +228,8 @@ class PaymentView(LoginRequiredMixin, DetailView):
                     access.save()
 
         # Send Telegram Message
-        bot_token = '8227368106:AAEbSmIdTFRwy1QUoiuGMJGo8SM_Nfh5-BA'
-        chat_id = '-5199045814'
+        bot_token = settings.TELEGRAM_BOT_TOKEN
+        chat_id = settings.TELEGRAM_CHAT_ID
         text_message = f"New Pending User: {payer_name} ({phone_number}) claims he paid 100 NIS.\nCourse: {category.name}"
         
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -262,7 +262,7 @@ def telegram_webhook(request, bot_token):
     Receives callback queries from Telegram inline keyboards (Approve/Reject).
     """
     # Verify the incoming bot token matches our secret to prevent unauthorized requests
-    configured_token = '8227368106:AAEbSmIdTFRwy1QUoiuGMJGo8SM_Nfh5-BA'
+    configured_token = settings.TELEGRAM_BOT_TOKEN
     if bot_token != configured_token:
         return JsonResponse({"error": "Unauthorized"}, status=403)
 
@@ -276,7 +276,7 @@ def telegram_webhook(request, bot_token):
                 callback_id = callback_query.get('id')
                 data = callback_query.get('data', '')
                 message = callback_query.get('message', {})
-                chat_id = message.get('chat', {}).get('id') or '-5199045814'
+                chat_id = message.get('chat', {}).get('id') or settings.TELEGRAM_CHAT_ID
                 message_id = message.get('message_id')
                 
                 # Check for our action prefixes
