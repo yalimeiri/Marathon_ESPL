@@ -152,5 +152,6 @@ class VideoAdmin(admin.ModelAdmin):
         context.update({
             'bunny_library_id': getattr(settings, 'BUNNY_LIBRARY_ID', ''),
             'bunny_api_key': getattr(settings, 'BUNNY_API_KEY', ''),
+            'bunny_pull_zone': getattr(settings, 'BUNNY_PULL_ZONE', ''),
         })
         return super().render_change_form(request, context, add=add, change=change, form_url=form_url, obj=obj)
