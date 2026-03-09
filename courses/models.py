@@ -14,6 +14,38 @@ activated in settings.py.
 from django.db import models
 from django.conf import settings
 
+class SiteConfiguration(models.Model):
+    """
+    Singleton model to hold global site settings.
+    Access via SiteConfiguration.get_solo()
+    """
+    telegram_bot_token = models.CharField(
+        max_length=255, 
+        blank=True, 
+        verbose_name="Telegram Bot Token",
+        help_text="The token from BotFather (e.g. 12345:ABCDEF)"
+    )
+    telegram_chat_id = models.CharField(
+        max_length=255, 
+        blank=True, 
+        verbose_name="Telegram Chat ID",
+        help_text="The Chat ID to send payment notifications to."
+    )
+
+    class Meta:
+        verbose_name = "Site Configuration"
+        verbose_name_plural = "Site Configuration"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super(SiteConfiguration, self).save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 class AccessTier(models.IntegerChoices):
     VISITING = 0, 'Visiting'
     PENDING = 1, 'Pending'

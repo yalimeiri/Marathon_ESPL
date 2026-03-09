@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from datetime import timedelta
-from courses.models import Purchase, CategoryAccess, AccessTier
+from courses.models import Purchase, CategoryAccess, AccessTier, SiteConfiguration
 from django.conf import settings
 
 @csrf_exempt
@@ -44,7 +44,8 @@ def telegram_webhook(request):
                         access.save()
                     
                     # Update message to remove buttons and show status
-                    bot_token = settings.TELEGRAM_BOT_TOKEN
+                    config = SiteConfiguration.get_solo()
+                    bot_token = config.telegram_bot_token or settings.TELEGRAM_BOT_TOKEN
                     edit_url = f"https://api.telegram.org/bot{bot_token}/editMessageText"
                     new_text = message.get("text", "") + f"\n\n[{new_status}]"
                     edit_payload = {
@@ -55,7 +56,8 @@ def telegram_webhook(request):
                     requests.post(edit_url, json=edit_payload, timeout=5)
                 
                 # Answer the callback query so the button stops loading
-                bot_token = settings.TELEGRAM_BOT_TOKEN
+                config = SiteConfiguration.get_solo()
+                bot_token = config.telegram_bot_token or settings.TELEGRAM_BOT_TOKEN
                 answer_url = f"https://api.telegram.org/bot{bot_token}/answerCallbackQuery"
                 requests.post(answer_url, json={
                     "callback_query_id": callback_id,

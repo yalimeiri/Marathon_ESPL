@@ -16,7 +16,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
 
-from .models import Category, Subcategory, Video, Purchase, CategoryAccess
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess, SiteConfiguration
 
 @admin.register(Subcategory)
 class SubcategoryAdmin(admin.ModelAdmin):
@@ -24,6 +24,19 @@ class SubcategoryAdmin(admin.ModelAdmin):
     list_filter = ("category",)
     search_fields = ("title", "description", "category__name")
     ordering = ("category", "order", "title")
+
+@admin.register(SiteConfiguration)
+class SiteConfigurationAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'telegram_bot_token', 'telegram_chat_id')
+    
+    def has_add_permission(self, request):
+        if self.model.objects.count() > 0:
+            return False
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 
 @admin.register(Purchase)
