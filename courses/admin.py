@@ -26,7 +26,6 @@ class SubcategoryAdmin(SortableAdminMixin, admin.ModelAdmin):
     list_filter = ("category",)
     search_fields = ("title", "description", "category__name")
     save_on_top = True
-    ordering = ("category", "order", "title")
 
 @admin.register(SiteConfiguration)
 class SiteConfigurationAdmin(admin.ModelAdmin):
@@ -93,15 +92,13 @@ class VideoInline(SortableStackedInline):
     """Shows videos directly inside the Subcategory admin page."""
 
     model = Video
-    extra = 1
-    fields = ("title", "file", "is_published")
+    extra = 0
 
 class SubcategoryInline(SortableStackedInline):
     """Shows subcategories directly inside the Category admin page."""
 
     model = Subcategory
-    extra = 1
-    fields = ("title", "description")
+    extra = 0
 
 
 @admin.register(Category)
@@ -147,7 +144,7 @@ class VideoAdmin(SortableAdminMixin, admin.ModelAdmin):
 
     fieldsets = (
         (None, {
-            "fields": ("title", "category", "subcategory", "order", "minimum_access_level", "is_published"),
+            "fields": ("title", "category", "subcategory", "minimum_access_level", "is_published"),
         }),
         ("Content", {
             "fields": ("file", "video_url", "bunny_video_id", "description"),
