@@ -137,6 +137,7 @@ UNFOLD = {
     },
     "SHOW_HISTORY": True, 
     "SHOW_VIEW_ON_SITE": True,
+    "DASHBOARD_CALLBACK": "courses.admin_dashboard.dashboard_callback",
 }
 
 # ── Database ────────────────────────────────────────────────────────────────

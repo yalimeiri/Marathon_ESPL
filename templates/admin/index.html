@@ -1,0 +1,87 @@
+{% extends 'admin/base.html' %}
+{% load i18n unfold %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <!-- Custom Dashboard -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 mt-2">
+        
+        <!-- Revenue Card -->
+        {% component "unfold/components/card.html" with title="Total Revenue" %}
+            <div class="text-4xl font-bold text-gray-900 dark:text-gray-100 mt-2">
+                ₪{{ total_revenue|default:"0" }}
+            </div>
+            <div class="text-sm text-gray-500 mt-2 font-medium">
+                This Month: <span class="text-gray-900 dark:text-gray-200">₪{{ monthly_revenue|default:"0" }}</span>
+            </div>
+        {% endcomponent %}
+
+        <!-- Students Card -->
+        {% component "unfold/components/card.html" with title="Enrolled Students" %}
+            <div class="text-4xl font-bold text-gray-900 dark:text-gray-100 mt-2">
+                {{ total_students|default:"0" }}
+            </div>
+            <div class="text-sm text-gray-500 mt-2 font-medium">
+                Expiring Next 7 Days: <span class="{% if expiring_soon > 0 %}text-amber-500{% else %}text-gray-400{% endif %} font-semibold">{{ expiring_soon|default:"0" }}</span>
+            </div>
+        {% endcomponent %}
+
+        <!-- Pending Approvals -->
+        {% component "unfold/components/card.html" with title="Pending Approvals" %}
+            <div class="text-4xl font-bold {% if pending_approvals > 0 %}text-red-500{% else %}text-emerald-500{% endif %} mt-2">
+                {{ pending_approvals|default:"0" }}
+            </div>
+            <div class="text-sm text-gray-500 mt-2 font-medium">
+                {% if pending_approvals > 0 %}Requires action in Purchase list.{% else %}All caught up!{% endif %}
+            </div>
+        {% endcomponent %}
+
+    </div>
+
+    <!-- Sales Table / Original Index Content -->
+    <div class="flex flex-col xl:flex-row xl:gap-8">
+        <div class="grow flex flex-col gap-8">
+            <!-- Sales per course -->
+            {% component "unfold/components/card.html" with title="Sales per Course" %}
+                <div class="-mx-4 -my-4 sm:-mx-6 sm:-my-6">
+                    <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                        <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-b dark:border-gray-800">
+                            <tr>
+                                <th scope="col" class="px-6 py-4 font-semibold">Course</th>
+                                <th scope="col" class="px-6 py-4 font-semibold text-right">Sales Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in sales_per_course %}
+                                <tr class="border-b bg-white dark:border-gray-800 dark:bg-gray-900 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                    <td class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                        {{ row.name }}
+                                    </td>
+                                    <td class="px-6 py-4 text-right font-medium text-gray-700 dark:text-gray-300">
+                                        {{ row.sales }}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr class="bg-white dark:bg-gray-900">
+                                    <td colspan="2" class="px-6 py-8 text-center text-gray-500">No sales data yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endcomponent %}
+
+            <!-- Original App List -->
+            {% include "unfold/helpers/app_list_default.html" %}
+        </div>
+
+        <div class="w-full xl:w-96 shrink-0 mt-8 xl:mt-0">
+            {% include "unfold/helpers/history.html" %}
+        </div>
+    </div>
+{% endblock %}
