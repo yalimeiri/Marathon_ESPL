@@ -177,6 +177,12 @@
                     style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;cursor:default;"
                     oncontextmenu="return false;"></div>
 
+                <!-- Dynamic Anti-Piracy Watermark -->
+                <div id="dynamic-watermark"
+                    style="position:absolute; z-index:15; color:rgba(255, 255, 255, 0.25); font-size:1rem; font-weight:bold; font-family:monospace; pointer-events:none; transition: top 3s ease, left 3s ease, opacity 2s ease; opacity:0;">
+                    {{ request.user.email }}
+                </div>
+
                 <!-- Floating Toolbar injected INSIDE the container so it persists in fullscreen -->
                 <div id="custom-zoom-toolbar"
                     style="position:absolute; top:20px; right:20px; z-index:20; display:flex; gap:8px; background:rgba(15, 23, 42, 0.7); padding:8px; border-radius:8px; backdrop-filter:blur(4px); transition:opacity 0.3s; opacity:0; pointer-events:none;">
@@ -811,6 +817,47 @@
                         videoElement.currentTime -= 5;
                         break;
                 }
+            });
+
+            // Dynamic Watermark Logic
+            const watermark = document.getElementById('dynamic-watermark');
+            const zoomContainer = document.getElementById('video-zoom-container');
+            let watermarkInterval;
+
+            function moveWatermark() {
+                if (!watermark || !zoomContainer) return;
+
+                const maxX = zoomContainer.clientWidth - watermark.clientWidth;
+                const maxY = zoomContainer.clientHeight - watermark.clientHeight;
+
+                // Random position within bounds
+                const randomX = Math.floor(Math.random() * Math.max(0, maxX));
+                const randomY = Math.floor(Math.random() * Math.max(0, maxY));
+
+                watermark.style.left = `${randomX}px`;
+                watermark.style.top = `${randomY}px`;
+
+                // Keep it visible only when playing to avoid annoying users looking at a paused screen
+                if (!videoElement.paused) {
+                    watermark.style.opacity = '1';
+                } else {
+                    watermark.style.opacity = '0';
+                }
+            }
+
+            videoElement.addEventListener('play', () => {
+                moveWatermark();
+                watermarkInterval = setInterval(moveWatermark, 4000); // Move every 4 seconds
+            });
+
+            videoElement.addEventListener('pause', () => {
+                clearInterval(watermarkInterval);
+                if (watermark) watermark.style.opacity = '0';
+            });
+
+            videoElement.addEventListener('ended', () => {
+                clearInterval(watermarkInterval);
+                if (watermark) watermark.style.opacity = '0';
             });
         }
     });
