@@ -52,10 +52,25 @@ class SiteConfigurationAdmin(ModelAdmin):
 
 @admin.register(Purchase)
 class PurchaseAdmin(ModelAdmin):
-    list_display = ('user', 'category', 'status', 'phone_number', 'payer_name', 'created_at')
+    list_display = ('user', 'category', 'price_paid', 'status', 'phone_number', 'payer_name', 'created_at')
     list_filter = ('status', 'category')
     search_fields = ('user__username', 'phone_number', 'payer_name')
     readonly_fields = ('created_at', 'updated_at')
+
+    @admin.display(description="Price Paid")
+    def price_paid(self, obj):
+        return format_html('₪{}', obj.category.price)
+
+    def changelist_view(self, request, extra_context=None):
+        # Calculate the total for the currently visible queryset
+        response = super().changelist_view(request, extra_context=extra_context)
+        try:
+            qs = response.context_data['cl'].queryset
+            total = sum(p.category.price for p in qs.select_related('category'))
+            response.context_data['purchases_total'] = total
+        except (AttributeError, KeyError):
+            pass
+        return response
 
 
 class IsExpiredFilter(admin.SimpleListFilter):

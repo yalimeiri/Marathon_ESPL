@@ -1,0 +1,17 @@
+/* Custom Admin Overrides for Marathon ESPL */
+
+/* Enlarge sidebar section headings (app labels) */
+#nav-sidebar .module caption,
+aside .font-semibold.text-xs,
+aside [class*="uppercase"][class*="text-xs"] {
+    font-size: 0.85rem !important;
+    letter-spacing: 0.04em;
+}
+
+/* Enlarge sidebar model links */
+aside nav a,
+aside ul a,
+#nav-sidebar th a,
+#nav-sidebar td a {
+    font-size: 0.9rem !important;
+}

@@ -1,0 +1,14 @@
+{% extends "admin/change_list.html" %}
+
+{% block result_list %}
+    {{ block.super }}
+
+    {% if purchases_total is not None %}
+    <div class="mt-4 flex justify-end">
+        <div class="inline-flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-6 py-3">
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Total:</span>
+            <span class="text-lg font-bold text-gray-900 dark:text-gray-100">₪{{ purchases_total }}</span>
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}
