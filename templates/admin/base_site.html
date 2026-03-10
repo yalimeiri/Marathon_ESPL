@@ -1,0 +1,17 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | Marathon LMS Admin{% endblock %}
+
+{% block branding %}
+<h1 id="site-name" style="display: flex; align-items: center; gap: 10px;">
+    <a href="{% url 'admin:index' %}"
+        style="display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none;">
+        <img src="{% static 'logo.png' %}" alt="Marathon LMS Logo"
+            style="height: 40px; width: auto; object-fit: contain;">
+        <span>Marathon LMS Administration</span>
+    </a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
