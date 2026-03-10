@@ -62,6 +62,7 @@ if not DEBUG:
 # ── Application definition ──────────────────────────────────────────────────
 INSTALLED_APPS = [
     # Django built-ins
+    "unfold",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -109,6 +110,35 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "marathonlms.wsgi.application"
+
+# ── Unfold Admin Settings ───────────────────────────────────────────────────
+from django.templatetags.static import static
+
+UNFOLD = {
+    "SITE_TITLE": "Marathon ESPL Admin",
+    "SITE_HEADER": "Marathon ESPL",
+    "SITE_URL": "/",
+    "SITE_ICON": {
+        "light": lambda request: static("courses/img/marathon-logo.svg"),  # fallback
+        "dark": lambda request: static("courses/img/marathon-logo.svg"),
+    },
+    "COLORS": {
+        "primary": {
+            "50": "250 253 255",
+            "100": "240 249 255",
+            "200": "224 242 254",
+            "300": "186 230 253",
+            "400": "56 189 248",
+            "500": "14 165 233",
+            "600": "2 132 199",
+            "700": "3 105 161",
+            "800": "7 89 133",
+            "900": "12 74 110",
+        },
+    },
+    "SHOW_HISTORY": True, 
+    "SHOW_VIEW_ON_SITE": True,
+}
 
 # ── Database ────────────────────────────────────────────────────────────────
 import dj_database_url

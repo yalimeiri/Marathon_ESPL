@@ -10,13 +10,14 @@ Registers CustomUser in the Django Admin with:
 """
 
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import CustomUser
 from courses.models import CategoryAccess
 
-class CategoryAccessInline(admin.TabularInline):
+class CategoryAccessInline(TabularInline):
     model = CategoryAccess
     extra = 1
     fields = ('category', 'access_level', 'expires_at')
@@ -45,16 +46,16 @@ def delete_selected_users(modeladmin, request, queryset):
 
 
 @admin.register(CustomUser)
-class CustomUserAdmin(UserAdmin):
+class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
     actions = [reset_device_lock, delete_selected_users]
     inlines = [CategoryAccessInline]
     # Show delete link on the individual user detail page
     show_full_result_count = True
 
     # Add device_uuid to the detail view (read-only — managed by the system)
-    readonly_fields = UserAdmin.readonly_fields + ("device_uuid",)
+    readonly_fields = BaseUserAdmin.readonly_fields + ("device_uuid",)
 
-    fieldsets = UserAdmin.fieldsets + (
+    fieldsets = BaseUserAdmin.fieldsets + (
         (
             _("Device Security"),
             {
@@ -76,5 +77,5 @@ class CustomUserAdmin(UserAdmin):
         "is_staff",
         "device_uuid",
     )
-    list_filter = UserAdmin.list_filter
+    list_filter = BaseUserAdmin.list_filter
     search_fields = ("username", "email", "first_name", "last_name")

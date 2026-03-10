@@ -11,24 +11,33 @@ Video Admin features:
 """
 
 from django.contrib import admin
+from unfold.admin import ModelAdmin, StackedInline
+from django.urls import reverse
 from django.utils.html import format_html
+from django.utils import timezone
+from datetime import timedelta
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
 
-from adminsortable2.admin import SortableAdminMixin, SortableAdminBase, SortableStackedInline
-
 from .models import Category, Subcategory, Video, Purchase, CategoryAccess, SiteConfiguration
 
 @admin.register(Subcategory)
-class SubcategoryAdmin(SortableAdminMixin, admin.ModelAdmin):
-    list_display = ("title", "category")
+class SubcategoryAdmin(ModelAdmin):
+    list_display = ("title", "category", "videos_link")
     list_filter = ("category",)
     search_fields = ("title", "description", "category__name")
+    ordering_field = "order"
     save_on_top = True
 
+    @admin.display(description="Videos")
+    def videos_link(self, obj):
+        count = obj.videos.count()
+        url = reverse("admin:courses_video_changelist") + f"?subcategory__id__exact={obj.id}"
+        return format_html('<a href="{}" class="font-semibold text-primary-600">{} Videos &rarr;</a>', url, count)
+
 @admin.register(SiteConfiguration)
-class SiteConfigurationAdmin(admin.ModelAdmin):
+class SiteConfigurationAdmin(ModelAdmin):
     list_display = ('__str__', 'telegram_bot_token', 'telegram_chat_id')
     
     def has_add_permission(self, request):
@@ -42,7 +51,7 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
 
 
 @admin.register(Purchase)
-class PurchaseAdmin(admin.ModelAdmin):
+class PurchaseAdmin(ModelAdmin):
     list_display = ('user', 'category', 'status', 'phone_number', 'payer_name', 'created_at')
     list_filter = ('status', 'category')
     search_fields = ('user__username', 'phone_number', 'payer_name')
@@ -75,7 +84,7 @@ def extend_access_30_days(modeladmin, request, queryset):
         obj.save()
 
 @admin.register(CategoryAccess)
-class CategoryAccessAdmin(admin.ModelAdmin):
+class CategoryAccessAdmin(ModelAdmin):
     list_display = ('user', 'category', 'access_level', 'expires_at', 'is_expired')
     list_filter = ('access_level', 'category', IsExpiredFilter)
     search_fields = ('user__username', 'category__name')
@@ -88,25 +97,34 @@ class CategoryAccessAdmin(admin.ModelAdmin):
         return False
 
 
-class VideoInline(SortableStackedInline):
+class VideoInline(StackedInline):
     """Shows videos directly inside the Subcategory admin page."""
 
     model = Video
     extra = 0
+    ordering_field = "order"
 
-class SubcategoryInline(SortableStackedInline):
+class SubcategoryInline(StackedInline):
     """Shows subcategories directly inside the Category admin page."""
 
     model = Subcategory
     extra = 0
+    ordering_field = "order"
 
 
 @admin.register(Category)
-class CategoryAdmin(SortableAdminMixin, SortableAdminBase, admin.ModelAdmin):
-    list_display = ("name", "price", "video_count", "created_at")
+class CategoryAdmin(ModelAdmin):
+    list_display = ("name", "price", "subcategories_link", "video_count", "created_at")
     search_fields = ("name",)
     inlines = [SubcategoryInline]
+    ordering_field = "order"
     save_on_top = True
+
+    @admin.display(description="Subcategories")
+    def subcategories_link(self, obj):
+        count = obj.subcategories.count()
+        url = reverse("admin:courses_subcategory_changelist") + f"?category__id__exact={obj.id}"
+        return format_html('<a href="{}" class="font-semibold text-primary-600">{} Subcats &rarr;</a>', url, count)
 
     @admin.display(description="# Videos")
     def video_count(self, obj):
@@ -124,9 +142,13 @@ def unpublish_videos(modeladmin, request, queryset):
 
 
 @admin.register(Video)
-class VideoAdmin(SortableAdminMixin, admin.ModelAdmin):
+class VideoAdmin(ModelAdmin):
+    # Unfold automatically handles styling, but we might keep our custom template or adapt it.
+    # For now, let's keep it to see if it still injects what we need without breaking Unfold.
+    # Actually, Unfold uses its own change_form template. Better to do it Unfold way if needed later, but let's try.
     change_form_template = "admin/courses/video/change_form.html"
     actions = [publish_videos, unpublish_videos]
+    ordering_field = "order"
 
     list_display = (
         "title",
