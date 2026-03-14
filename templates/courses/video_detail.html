@@ -172,6 +172,12 @@
                     </video>
                 </div>
 
+                <!-- Dynamic Watermark Overlay (anti-piracy) -->
+                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:8; pointer-events:none; overflow:hidden;" oncontextmenu="return false;">
+                    <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:40px 60px; padding:20px;">
+                    </div>
+                </div>
+
                 <!-- The transparent overlay to absorb clicks for both dragging AND preventing native right click -->
                 <div id="video-drag-overlay"
                     style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;cursor:default;"
@@ -814,6 +820,72 @@
             });
         }
     });
+</script>
+
+<!-- Dynamic Watermark Script -->
+<script>
+(function() {
+    const WATERMARK_USER = "{{ request.user.username|escapejs }}";
+    if (!WATERMARK_USER) return;
+
+    function populateWatermark() {
+        const inner = document.getElementById('video-watermark-inner');
+        if (!inner) return;
+        inner.innerHTML = '';
+
+        // Create enough text spans to fill the rotated 200% container
+        const count = 60;
+        for (let i = 0; i < count; i++) {
+            const span = document.createElement('span');
+            span.textContent = WATERMARK_USER;
+            span.style.cssText = 'color:rgba(255,255,255,0.09); font-size:14px; font-family:monospace; font-weight:700; letter-spacing:2px; white-space:nowrap; user-select:none; -webkit-user-select:none; text-shadow:0 0 4px rgba(0,0,0,0.3); pointer-events:none;';
+            inner.appendChild(span);
+        }
+    }
+
+    function ensureWatermarkContainer() {
+        const container = document.getElementById('video-zoom-container');
+        if (!container) return;
+
+        let wm = document.getElementById('video-watermark');
+        if (!wm) {
+            // Re-create if removed via DevTools
+            wm = document.createElement('div');
+            wm.id = 'video-watermark';
+            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:8; pointer-events:none; overflow:hidden;';
+            wm.oncontextmenu = function() { return false; };
+
+            const inner = document.createElement('div');
+            inner.id = 'video-watermark-inner';
+            inner.style.cssText = 'position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:40px 60px; padding:20px;';
+            wm.appendChild(inner);
+
+            // Insert before drag overlay
+            const dragOverlay = document.getElementById('video-drag-overlay');
+            if (dragOverlay) {
+                container.insertBefore(wm, dragOverlay);
+            } else {
+                container.appendChild(wm);
+            }
+        }
+
+        // Ensure content exists
+        const inner = document.getElementById('video-watermark-inner');
+        if (inner && inner.children.length === 0) {
+            populateWatermark();
+        }
+    }
+
+    // Initial population
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', populateWatermark);
+    } else {
+        populateWatermark();
+    }
+
+    // Anti-tamper: re-inject watermark every 3 seconds if removed
+    setInterval(ensureWatermarkContainer, 3000);
+})();
 </script>
 
 {% endblock %}
