@@ -162,7 +162,7 @@
 
                 <!-- The Video Element (scaled and translated) -->
                 <div id="video-zoom-wrapper"
-                    style="width:100%;height:100%;transform-origin:center center;transition:transform 0.2s ease-out;">
+                    style="width:100%;height:100%;transform-origin:center center;transition:transform 0.2s ease-out;position:relative;z-index:1;">
                     <!-- Hide native controls so we can fully control the experience -->
                     <video id="main-video-player" controlsList="nodownload" oncontextmenu="return false;"
                         data-video-src="{% if url %}{{ url }}{% elif video.file %}{{ video.file.url }}{% endif %}"
@@ -173,8 +173,8 @@
                 </div>
 
                 <!-- Dynamic Watermark Overlay (anti-piracy) -->
-                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:8; pointer-events:none; overflow:hidden;" oncontextmenu="return false;">
-                    <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:40px 60px; padding:20px;">
+                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:15; pointer-events:none; overflow:hidden;" oncontextmenu="return false;">
+                    <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;">
                     </div>
                 </div>
 
@@ -834,11 +834,11 @@
         inner.innerHTML = '';
 
         // Create enough text spans to fill the rotated 200% container
-        const count = 60;
+        const count = 35;
         for (let i = 0; i < count; i++) {
             const span = document.createElement('span');
             span.textContent = WATERMARK_USER;
-            span.style.cssText = 'color:rgba(255,255,255,0.09); font-size:14px; font-family:monospace; font-weight:700; letter-spacing:2px; white-space:nowrap; user-select:none; -webkit-user-select:none; text-shadow:0 0 4px rgba(0,0,0,0.3); pointer-events:none;';
+            span.style.cssText = 'color:rgba(255,255,255,0.07); font-size:16px; font-family:monospace; font-weight:600; letter-spacing:3px; white-space:nowrap; user-select:none; -webkit-user-select:none; pointer-events:none;';
             inner.appendChild(span);
         }
     }
@@ -852,12 +852,12 @@
             // Re-create if removed via DevTools
             wm = document.createElement('div');
             wm.id = 'video-watermark';
-            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:8; pointer-events:none; overflow:hidden;';
+            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:15; pointer-events:none; overflow:hidden;';
             wm.oncontextmenu = function() { return false; };
 
             const inner = document.createElement('div');
             inner.id = 'video-watermark-inner';
-            inner.style.cssText = 'position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:40px 60px; padding:20px;';
+            inner.style.cssText = 'position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;';
             wm.appendChild(inner);
 
             // Insert before drag overlay
