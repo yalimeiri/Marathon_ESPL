@@ -166,7 +166,7 @@
                     <!-- Hide native controls so we can fully control the experience -->
                     <video id="main-video-player" controlsList="nodownload" oncontextmenu="return false;"
                         data-video-src="{% if url %}{{ url }}{% elif video.file %}{{ video.file.url }}{% endif %}"
-                        data-next-url="{{ next_video_url|default:'' }}" style="width:100%;height:100%;display:block;transform:translateZ(0);position:relative;z-index:0;"
+                        data-next-url="{{ next_video_url|default:'' }}" style="width:100%;height:100%;display:block;"
                         preload="metadata" playsinline>
                         Your browser does not support the video tag.
                     </video>
@@ -234,8 +234,8 @@
                         style="background:#475569; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem; transition:background 0.2s;">Cancel</button>
                 </div>
 
-                <!-- Dynamic Watermark (anti-piracy) — DIAGNOSTIC: red background to test fullscreen visibility -->
-                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; background:rgba(255,0,0,0.15);" oncontextmenu="return false;">
+                <!-- Dynamic Watermark (anti-piracy) -->
+                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; mix-blend-mode:difference;" oncontextmenu="return false;">
                     <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;">
                     </div>
                 </div>
@@ -854,7 +854,7 @@
             // Re-create if removed via DevTools
             wm = document.createElement('div');
             wm.id = 'video-watermark';
-            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; background:rgba(255,0,0,0.15);';
+            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; mix-blend-mode:difference;';
             wm.oncontextmenu = function() { return false; };
 
             const inner = document.createElement('div');
