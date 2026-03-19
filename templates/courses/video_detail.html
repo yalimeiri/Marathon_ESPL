@@ -166,7 +166,7 @@
                     <!-- Hide native controls so we can fully control the experience -->
                     <video id="main-video-player" controlsList="nodownload" oncontextmenu="return false;"
                         data-video-src="{% if url %}{{ url }}{% elif video.file %}{{ video.file.url }}{% endif %}"
-                        data-next-url="{{ next_video_url|default:'' }}" style="width:100%;height:100%;display:block;"
+                        data-next-url="{{ next_video_url|default:'' }}" style="width:100%;height:100%;display:block;transform:translateZ(0);position:relative;z-index:0;"
                         preload="metadata" playsinline>
                         Your browser does not support the video tag.
                     </video>
@@ -841,7 +841,7 @@
         for (let i = 0; i < count; i++) {
             const span = document.createElement('span');
             span.textContent = WATERMARK_USER;
-            span.style.cssText = 'color:rgba(255,255,255,0.10); font-size:16px; font-family:monospace; font-weight:600; letter-spacing:3px; white-space:nowrap; user-select:none; -webkit-user-select:none; pointer-events:none;';
+            span.style.cssText = 'color:rgba(255,255,255,0.25); font-size:18px; font-family:monospace; font-weight:700; letter-spacing:3px; white-space:nowrap; user-select:none; -webkit-user-select:none; pointer-events:none;';
             inner.appendChild(span);
         }
     }
