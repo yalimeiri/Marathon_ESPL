@@ -170,12 +170,6 @@
                         preload="metadata" playsinline>
                         Your browser does not support the video tag.
                     </video>
-
-                    <!-- Dynamic Watermark — INSIDE zoom-wrapper to share GPU compositing layer with video -->
-                    <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; will-change:transform;" oncontextmenu="return false;">
-                        <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;">
-                        </div>
-                    </div>
                 </div>
 
 
@@ -240,6 +234,11 @@
                         style="background:#475569; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem; transition:background 0.2s;">Cancel</button>
                 </div>
 
+                <!-- Dynamic Watermark (anti-piracy) — DIAGNOSTIC: red background to test fullscreen visibility -->
+                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; background:rgba(255,0,0,0.15);" oncontextmenu="return false;">
+                    <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;">
+                    </div>
+                </div>
 
             </div>
 
@@ -847,16 +846,15 @@
     }
 
     function ensureWatermarkContainer() {
-        // Insert into the zoom wrapper (same GPU layer as the video element)
-        const wrapper = document.getElementById('video-zoom-wrapper');
-        if (!wrapper) return;
+        const container = document.getElementById('video-zoom-container');
+        if (!container) return;
 
         let wm = document.getElementById('video-watermark');
         if (!wm) {
             // Re-create if removed via DevTools
             wm = document.createElement('div');
             wm.id = 'video-watermark';
-            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; will-change:transform;';
+            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; background:rgba(255,0,0,0.15);';
             wm.oncontextmenu = function() { return false; };
 
             const inner = document.createElement('div');
@@ -864,8 +862,8 @@
             inner.style.cssText = 'position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;';
             wm.appendChild(inner);
 
-            // Append inside the zoom wrapper — same compositing layer as <video>
-            wrapper.appendChild(wm);
+            // Append to the container (same parent as controls bar)
+            container.appendChild(wm);
         }
 
         // Ensure content exists
