@@ -172,11 +172,6 @@
                     </video>
                 </div>
 
-                <!-- Dynamic Watermark Overlay (anti-piracy) -->
-                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:15; pointer-events:none; overflow:hidden;" oncontextmenu="return false;">
-                    <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;">
-                    </div>
-                </div>
 
                 <!-- The transparent overlay to absorb clicks for both dragging AND preventing native right click -->
                 <div id="video-drag-overlay"
@@ -237,6 +232,12 @@
                     </div>
                     <button id="btn-cancel-autoplay"
                         style="background:#475569; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem; transition:background 0.2s;">Cancel</button>
+                </div>
+
+                <!-- Dynamic Watermark Overlay (anti-piracy) — MUST be last child for reliable fullscreen rendering -->
+                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:50; pointer-events:none; overflow:hidden;" oncontextmenu="return false;">
+                    <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;">
+                    </div>
                 </div>
             </div>
 
@@ -852,7 +853,7 @@
             // Re-create if removed via DevTools
             wm = document.createElement('div');
             wm.id = 'video-watermark';
-            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:15; pointer-events:none; overflow:hidden;';
+            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:50; pointer-events:none; overflow:hidden;';
             wm.oncontextmenu = function() { return false; };
 
             const inner = document.createElement('div');
@@ -860,13 +861,8 @@
             inner.style.cssText = 'position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;';
             wm.appendChild(inner);
 
-            // Insert before drag overlay
-            const dragOverlay = document.getElementById('video-drag-overlay');
-            if (dragOverlay) {
-                container.insertBefore(wm, dragOverlay);
-            } else {
-                container.appendChild(wm);
-            }
+            // Append as LAST child — guaranteed to render on top in fullscreen
+            container.appendChild(wm);
         }
 
         // Ensure content exists
