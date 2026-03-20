@@ -241,8 +241,11 @@
                 </div>
 
                 <!-- Dynamic Watermark (anti-piracy) -->
-                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; mix-blend-mode:difference;" oncontextmenu="return false;">
-                    <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;">
+                <div id="video-watermark"
+                    style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; mix-blend-mode:difference;"
+                    oncontextmenu="return false;">
+                    <div id="video-watermark-inner"
+                        style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;">
                     </div>
                 </div>
 
@@ -271,7 +274,111 @@
             🔒 This video is <strong>unpublished</strong> and visible to staff only.
         </p>
         {% endif %}
+
+        <!-- ── Q&A Section ─────────────────────────────────────────────── -->
+        <div id="qa-section" style="margin-top:40px;">
+            <h2
+                style="font-size:1.3rem;font-weight:700;color:#c7d2fe;margin-bottom:24px;border-bottom:1px solid #252838;padding-bottom:12px;">
+                💬 שאלות ותשובות
+            </h2>
+
+            <!-- Ask a question form -->
+            <form method="post" action="{% url 'courses:ask-question' video.pk %}" style="margin-bottom:32px;">
+                {% csrf_token %}
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <textarea name="body" rows="3" placeholder="כתוב את שאלתך כאן..." required
+                        style="width:100%;padding:12px 16px;background:#13151f;border:1px solid #252838;border-radius:10px;color:#e2e4f0;font-family:inherit;font-size:0.95rem;resize:vertical;outline:none;transition:border-color .2s;"
+                        onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#252838'"></textarea>
+                    <button type="submit"
+                        style="align-self:flex-start;background:#6366f1;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:600;font-size:0.9rem;font-family:inherit;cursor:pointer;transition:background .15s;"
+                        onmouseover="this.style.background='#4f52d8'" onmouseout="this.style.background='#6366f1'">
+                        ✉️ שלח שאלה
+                    </button>
+                </div>
+            </form>
+
+            <!-- List of questions -->
+            {% if questions %}
+<div style="display:flex;flex-direction:column;gap:20px;">
+    {% for q in questions %}
+    <div style="background:#13151f;border:1px solid #252838;border-radius:12px;overflow:hidden;">
+
+        <div style="padding:16px 20px;display:flex;align-items:flex-start;gap:14px;">
+            <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#a5b4fc);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:0.95rem;flex-shrink:0;">
+                {{ q.author.username|slice:":1"|upper }}
+            </div>
+            <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <span style="color:#a5b4fc;font-weight:600;font-size:0.9rem;">
+                        {{ q.author.get_full_name|default:q.author.username }}
+                    </span>
+                    <span style="color:#475569;font-size:0.8rem;">{{ q.created_at|date:"d/m/Y H:i" }}</span>
+                    {% if q.author == request.user %}
+                        <span style="background:#1e2235;color:#6366f1;font-size:0.75rem;padding:2px 8px;border-radius:99px;font-weight:600;">אתה</span>
+                    {% endif %}
+                </div>
+                <p style="color:#e2e4f0;font-size:0.95rem;line-height:1.6;margin:0;">{{ q.body }}</p>
+            </div>
+        </div>
+
+        {% if q.answers.all %}
+        <div style="border-top:1px solid #252838;background:#0d0f1a;padding:12px 20px;display:flex;flex-direction:column;gap:12px;">
+            {% for a in q.answers.all %}
+            <div style="display:flex;align-items:flex-start;gap:12px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#059669,#6ee7b7);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:0.85rem;flex-shrink:0;">
+                    {{ a.author.username|slice:":1"|upper }}
+                </div>
+                <div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                        <span style="color:#6ee7b7;font-weight:600;font-size:0.85rem;">
+                            {{ a.author.get_full_name|default:a.author.username }}
+                        </span>
+                        <span style="color:#475569;font-size:0.75rem;">{{ a.created_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <p style="color:#cbd5e1;font-size:0.9rem;line-height:1.6;margin:0;">{{ a.body }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div style="border-top:1px solid #252838;padding:0;">
+            <button type="button" onclick="toggleReply({{ q.pk }})" style="width:100%;background:none;border:none;color:#6366f1;font-size:0.85rem;font-weight:600;padding:10px 20px;cursor:pointer;text-align:right;font-family:inherit;">
+                ↩ ענה על שאלה זו
+            </button>
+            <div id="reply-form-{{ q.pk }}" style="display:none;padding:0 20px 16px;">
+                <form method="post" action="{% url 'courses:post-answer' q.pk %}">
+                    {% csrf_token %}
+                    <textarea name="body" rows="2" placeholder="כתוב את תשובתך..." required style="width:100%;padding:10px 14px;background:#0b0d14;border:1px solid #252838;border-radius:8px;color:#e2e4f0;font-family:inherit;font-size:0.9rem;resize:vertical;outline:none;margin-bottom:8px;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#252838'"></textarea>
+                    <button type="submit" style="background:#059669;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:600;font-size:0.85rem;font-family:inherit;cursor:pointer;">
+                        ✅ שלח תשובה
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
+    {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align:center;padding:40px 0;color:#475569;">
+                <div style="font-size:2.5rem;margin-bottom:12px;">🤔</div>
+                <p>אין עדיין שאלות לסרטון זה. היה הראשון לשאול!</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <script>
+            function toggleReply(qpk) {
+                var form = document.getElementById('reply-form-' + qpk);
+                form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            }
+        </script>
+    </div>
+
+
+
+
+
 
     <!-- RIGHT: Sidebar Playlist -->
     <div id="sidebar-playlist-container"
@@ -873,63 +980,63 @@
 
 <!-- Dynamic Watermark Script -->
 <script>
-(function() {
-    const WATERMARK_USER = "{{ request.user.username|escapejs }}";
-    if (!WATERMARK_USER) return;
+    (function () {
+        const WATERMARK_USER = "{{ request.user.username|escapejs }}";
+        if (!WATERMARK_USER) return;
 
-    function populateWatermark() {
-        const inner = document.getElementById('video-watermark-inner');
-        if (!inner) return;
-        inner.innerHTML = '';
+        function populateWatermark() {
+            const inner = document.getElementById('video-watermark-inner');
+            if (!inner) return;
+            inner.innerHTML = '';
 
-        // Create enough text spans to fill the rotated 200% container
-        const count = 35;
-        for (let i = 0; i < count; i++) {
-            const span = document.createElement('span');
-            span.textContent = WATERMARK_USER;
-            span.style.cssText = 'color:rgba(255,255,255,0.25); font-size:18px; font-family:monospace; font-weight:700; letter-spacing:3px; white-space:nowrap; user-select:none; -webkit-user-select:none; pointer-events:none;';
-            inner.appendChild(span);
-        }
-    }
-
-    function ensureWatermarkContainer() {
-        const container = document.getElementById('video-zoom-container');
-        if (!container) return;
-
-        let wm = document.getElementById('video-watermark');
-        if (!wm) {
-            // Re-create if removed via DevTools
-            wm = document.createElement('div');
-            wm.id = 'video-watermark';
-            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; mix-blend-mode:difference;';
-            wm.oncontextmenu = function() { return false; };
-
-            const inner = document.createElement('div');
-            inner.id = 'video-watermark-inner';
-            inner.style.cssText = 'position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;';
-            wm.appendChild(inner);
-
-            // Append to the container (same parent as controls bar)
-            container.appendChild(wm);
+            // Create enough text spans to fill the rotated 200% container
+            const count = 35;
+            for (let i = 0; i < count; i++) {
+                const span = document.createElement('span');
+                span.textContent = WATERMARK_USER;
+                span.style.cssText = 'color:rgba(255,255,255,0.25); font-size:18px; font-family:monospace; font-weight:700; letter-spacing:3px; white-space:nowrap; user-select:none; -webkit-user-select:none; pointer-events:none;';
+                inner.appendChild(span);
+            }
         }
 
-        // Ensure content exists
-        const inner = document.getElementById('video-watermark-inner');
-        if (inner && inner.children.length === 0) {
+        function ensureWatermarkContainer() {
+            const container = document.getElementById('video-zoom-container');
+            if (!container) return;
+
+            let wm = document.getElementById('video-watermark');
+            if (!wm) {
+                // Re-create if removed via DevTools
+                wm = document.createElement('div');
+                wm.id = 'video-watermark';
+                wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; mix-blend-mode:difference;';
+                wm.oncontextmenu = function () { return false; };
+
+                const inner = document.createElement('div');
+                inner.id = 'video-watermark-inner';
+                inner.style.cssText = 'position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;';
+                wm.appendChild(inner);
+
+                // Append to the container (same parent as controls bar)
+                container.appendChild(wm);
+            }
+
+            // Ensure content exists
+            const inner = document.getElementById('video-watermark-inner');
+            if (inner && inner.children.length === 0) {
+                populateWatermark();
+            }
+        }
+
+        // Initial population
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', populateWatermark);
+        } else {
             populateWatermark();
         }
-    }
 
-    // Initial population
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', populateWatermark);
-    } else {
-        populateWatermark();
-    }
-
-    // Anti-tamper: re-inject watermark every 3 seconds if removed
-    setInterval(ensureWatermarkContainer, 3000);
-})();
+        // Anti-tamper: re-inject watermark every 3 seconds if removed
+        setInterval(ensureWatermarkContainer, 3000);
+    })();
 </script>
 
 {% endblock %}

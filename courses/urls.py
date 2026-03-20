@@ -32,4 +32,8 @@ urlpatterns = [
     # ── Upload Manager (superuser only) ────────────────────────────────────
     path("manager/upload/", views.upload_video_page, name="upload-video"),
     path("manager/save-video/", views.save_video, name="save-video"),
+
+    # ── Video Q&A ──────────────────────────────────────────────────────────
+    path("video/<int:video_pk>/ask/", views.ask_question, name="ask-question"),
+    path("question/<int:question_pk>/answer/", views.post_answer, name="post-answer"),
 ]

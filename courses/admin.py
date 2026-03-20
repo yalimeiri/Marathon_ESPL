@@ -20,7 +20,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
 
-from .models import Category, Subcategory, Video, Purchase, CategoryAccess, SiteConfiguration, FAQ
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer
 
 @admin.register(Subcategory)
 class SubcategoryAdmin(ModelAdmin):
@@ -220,4 +220,23 @@ class FAQAdmin(ModelAdmin):
     list_filter = ("is_published",)
     search_fields = ("question", "answer")
     ordering_field = "order"
+
+
+class VideoAnswerInline(StackedInline):
+    model = VideoAnswer
+    extra = 0
+
+
+@admin.register(VideoQuestion)
+class VideoQuestionAdmin(ModelAdmin):
+    list_display = ("author", "video", "body", "created_at")
+    list_filter = ("video",)
+    search_fields = ("body", "author__username")
+    inlines = [VideoAnswerInline]
+
+
+@admin.register(VideoAnswer)
+class VideoAnswerAdmin(ModelAdmin):
+    list_display = ("author", "question", "body", "created_at")
+    search_fields = ("body", "author__username")
 
