@@ -292,7 +292,7 @@
                     <button type="submit"
                         style="align-self:flex-start;background:#6366f1;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:600;font-size:0.9rem;font-family:inherit;cursor:pointer;transition:background .15s;"
                         onmouseover="this.style.background='#4f52d8'" onmouseout="this.style.background='#6366f1'">
-                        ✉️ שלח שאלה
+                        ❔ שלח שאלה
                     </button>
                 </div>
             </form>
@@ -349,7 +349,8 @@
                                         ADMIN
                                     </span>
                                     {% endif %}
-                                    <span style="color:#475569;font-size:0.75rem;">{{ a.created_at|date:"d/m/Y H:i" }}</span>
+                                    <span style="color:#475569;font-size:0.75rem;">{{ a.created_at|date:"d/m/Y H:i"
+                                        }}</span>
                                 </div>
                                 <p style="color:#cbd5e1;font-size:0.9rem;line-height:1.6;margin:0;">{{ a.body }}</p>
                             </div>
@@ -382,7 +383,7 @@
             </div>
             {% else %}
             <div style="text-align:center;padding:40px 0;color:#475569;">
-                <div style="font-size:2.5rem;margin-bottom:12px;">🤔</div>
+                <div style="font-size:2.5rem;margin-bottom:12px;">🐿️</div>
                 <p>אין עדיין שאלות לסרטון זה. היה הראשון לשאול!</p>
             </div>
             {% endif %}
