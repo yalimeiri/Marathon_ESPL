@@ -307,6 +307,12 @@
                                 <span style="color:#a5b4fc;font-weight:600;font-size:0.9rem;">
                                     {{ q.author.get_full_name|default:q.author.username }}
                                 </span>
+                                {% if q.author.is_staff %}
+                                <span
+                                    style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;font-size:0.65rem;padding:2px 6px;border-radius:6px;font-weight:700;letter-spacing:0.5px;">
+                                    ADMIN
+                                </span>
+                                {% endif %}
                                 <span style="color:#475569;font-size:0.8rem;">{{ q.created_at|date:"d/m/Y H:i" }}</span>
                                 {% if q.author == request.user %}
                                 <span
