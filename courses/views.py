@@ -28,7 +28,7 @@ import requests
 import json
 from django.utils import timezone
 
-from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer
 
 
 def get_effective_access_level(user, category):
@@ -173,6 +173,15 @@ class VideoDetailView(LoginRequiredMixin, DetailView):
                 context['next_video_url'] = reverse('courses:video-detail', args=[context['next_video'].pk])
         except ValueError:
             pass
+
+        # Q&A: fetch questions + answers for this video
+        context['questions'] = (
+            VideoQuestion.objects
+            .filter(video=video)
+            .prefetch_related('answers__author')
+            .select_related('author')
+            .order_by('-created_at')
+        )
             
         return context
 
@@ -416,6 +425,41 @@ def save_video(request):
 
     messages.success(request, f'✅ Video "{title}" saved successfully!')
     return redirect("courses:upload-video")
+
+
+@login_required
+@require_POST
+def ask_question(request, video_pk):
+    """
+    POST /courses/video/<video_pk>/ask/
+    Creates a VideoQuestion for the given video.
+    """
+    video = get_object_or_404(Video, pk=video_pk)
+    body = request.POST.get('body', '').strip()
+    if body:
+        VideoQuestion.objects.create(video=video, author=request.user, body=body)
+        messages.success(request, 'השאלה נשלחה בהצלחה! 🎉')
+    else:
+        messages.error(request, 'השאלה לא יכולה להיות ריקה.')
+    return redirect('courses:video-detail', pk=video_pk)
+
+
+@login_required
+@require_POST
+def post_answer(request, question_pk):
+    """
+    POST /courses/question/<question_pk>/answer/
+    Creates a VideoAnswer for the given question.
+    """
+    question = get_object_or_404(VideoQuestion, pk=question_pk)
+    body = request.POST.get('body', '').strip()
+    if body:
+        VideoAnswer.objects.create(question=question, author=request.user, body=body)
+        messages.success(request, 'התשובה נשלחה בהצלחה! 🎉')
+    else:
+        messages.error(request, 'התשובה לא יכולה להיות ריקה.')
+    return redirect('courses:video-detail', pk=question.video_id)
+
 
 
 class FAQListView(LoginRequiredMixin, ListView):

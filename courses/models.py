@@ -326,3 +326,59 @@ class FAQ(models.Model):
     def __str__(self):
         return self.question
 
+
+class VideoQuestion(models.Model):
+    """
+    A question posted by a user under a specific video.
+    """
+    video = models.ForeignKey(
+        Video,
+        on_delete=models.CASCADE,
+        related_name='questions',
+        verbose_name="Video"
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='video_questions',
+        verbose_name="Author"
+    )
+    body = models.TextField(verbose_name="Question")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Video Question"
+        verbose_name_plural = "Video Questions"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.author.username}: {self.body[:60]}"
+
+
+class VideoAnswer(models.Model):
+    """
+    An answer to a VideoQuestion, posted by any logged-in user.
+    """
+    question = models.ForeignKey(
+        VideoQuestion,
+        on_delete=models.CASCADE,
+        related_name='answers',
+        verbose_name="Question"
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='video_answers',
+        verbose_name="Author"
+    )
+    body = models.TextField(verbose_name="Answer")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Video Answer"
+        verbose_name_plural = "Video Answers"
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.author.username} → {self.question.body[:40]}"
+
