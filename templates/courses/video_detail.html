@@ -280,10 +280,9 @@
             <form method="post" action="{% url 'courses:ask-question' video.pk %}" style="margin-bottom:32px;">
                 {% csrf_token %}
                 <div style="display:flex;flex-direction:column;gap:10px;">
-                    <textarea name="body" rows="3" placeholder="כתוב את שאלתך כאן..."
+                    <textarea name="body" rows="3" placeholder="כתוב את שאלתך כאן..." required
                         style="width:100%;padding:12px 16px;background:#13151f;border:1px solid #252838;border-radius:10px;color:#e2e4f0;font-family:inherit;font-size:0.95rem;resize:vertical;outline:none;transition:border-color .2s;"
-                        onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#252838'"
-                        required></textarea>
+                        onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#252838'"></textarea>
                     <button type="submit"
                         style="align-self:flex-start;background:#6366f1;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:600;font-size:0.9rem;font-family:inherit;cursor:pointer;transition:background .15s;"
                         onmouseover="this.style.background='#4f52d8'" onmouseout="this.style.background='#6366f1'">
@@ -296,8 +295,7 @@
             {% if questions %}
             <div style="display:flex;flex-direction:column;gap:20px;">
                 {% for q in questions %}
-                <div style="background:#13151f;border:1px solid #252838;border-radius:12px;overflow:hidden;transition:border-color .2s;"
-                    onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#252838'">
+                <div style="background:#13151f;border:1px solid #252838;border-radius:12px;overflow:hidden;">
 
                     <!-- Question header -->
                     <div style="padding:16px 20px;display:flex;align-items:flex-start;gap:14px;">
@@ -311,8 +309,8 @@
                                     }}</span>
                                 <span style="color:#475569;font-size:0.8rem;">{{ q.created_at|date:"d/m/Y H:i" }}</span>
                                 {% if q.author == request.user %}<span
-                                    style="background:#1e2235;color:#6366f1;font-size:0.75rem;padding:2px 8px;border-radius:99px;font-weight:600;">אתה</span>{%
-                                endif %}
+                                    style="background:#1e2235;color:#6366f1;font-size:0.75rem;padding:2px 8px;border-radius:99px;font-weight:600;">אתה</span>{% endif %}
+
                             </div>
                             <p style="color:#e2e4f0;font-size:0.95rem;line-height:1.6;margin:0;">{{ q.body }}</p>
                         </div>
@@ -345,21 +343,18 @@
                     <!-- Reply form (collapsible) -->
                     <div style="border-top:1px solid #252838;padding:0;">
                         <button type="button" onclick="toggleReply({{ q.pk }})"
-                            style="width:100%;background:none;border:none;color:#6366f1;font-size:0.85rem;font-weight:600;padding:10px 20px;cursor:pointer;text-align:right;font-family:inherit;transition:background .15s;"
-                            onmouseover="this.style.background='#13151f'" onmouseout="this.style.background='none'">
+                            style="width:100%;background:none;border:none;color:#6366f1;font-size:0.85rem;font-weight:600;padding:10px 20px;cursor:pointer;text-align:right;font-family:inherit;">
                             ↩ ענה על שאלה זו
                         </button>
                         <div id="reply-form-{{ q.pk }}" style="display:none;padding:0 20px 16px;">
                             <form method="post" action="{% url 'courses:post-answer' q.pk %}">
                                 {% csrf_token %}
-                                <textarea name="body" rows="2" placeholder="כתוב את תשובתך..."
-                                    style="width:100%;padding:10px 14px;background:#0b0d14;border:1px solid #252838;border-radius:8px;color:#e2e4f0;font-family:inherit;font-size:0.9rem;resize:vertical;outline:none;transition:border-color .2s;margin-bottom:8px;"
-                                    onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#252838'"
-                                    required></textarea>
+                                <textarea name="body" rows="2" placeholder="כתוב את תשובתך..." required
+                                    style="width:100%;padding:10px 14px;background:#0b0d14;border:1px solid #252838;border-radius:8px;color:#e2e4f0;font-family:inherit;font-size:0.9rem;resize:vertical;outline:none;margin-bottom:8px;"
+                                    onfocus="this.style.borderColor='#6366f1'"
+                                    onblur="this.style.borderColor='#252838'"></textarea>
                                 <button type="submit"
-                                    style="background:#059669;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:600;font-size:0.85rem;font-family:inherit;cursor:pointer;transition:background .15s;"
-                                    onmouseover="this.style.background='#047857'"
-                                    onmouseout="this.style.background='#059669'">
+                                    style="background:#059669;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:600;font-size:0.85rem;font-family:inherit;cursor:pointer;">
                                     ✅ שלח תשובה
                                 </button>
                             </form>
@@ -378,12 +373,15 @@
 
         <script>
             function toggleReply(qpk) {
-                const form = document.getElementById('reply-form-' + qpk);
+                var form = document.getElementById('reply-form-' + qpk);
                 form.style.display = form.style.display === 'none' ? 'block' : 'none';
             }
         </script>
-
     </div>
+
+
+
+
 
 
     <!-- RIGHT: Sidebar Playlist -->
