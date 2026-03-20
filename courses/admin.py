@@ -20,7 +20,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
 
-from .models import Category, Subcategory, Video, Purchase, CategoryAccess, SiteConfiguration
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess, SiteConfiguration, FAQ
 
 @admin.register(Subcategory)
 class SubcategoryAdmin(ModelAdmin):
@@ -211,3 +211,13 @@ class VideoAdmin(ModelAdmin):
             'bunny_pull_zone': getattr(settings, 'BUNNY_PULL_ZONE', ''),
         })
         return super().render_change_form(request, context, add=add, change=change, form_url=form_url, obj=obj)
+
+
+@admin.register(FAQ)
+class FAQAdmin(ModelAdmin):
+    list_display = ("question", "is_published", "order", "created_at")
+    list_editable = ("is_published", "order")
+    list_filter = ("is_published",)
+    search_fields = ("question", "answer")
+    ordering_field = "order"
+

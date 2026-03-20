@@ -297,3 +297,32 @@ def cleanup_access_on_purchase_delete(sender, instance, **kwargs):
             access.access_level = AccessTier.VISITING
             access.expires_at = None
         access.save()
+
+
+class FAQ(models.Model):
+    """
+    Frequently Asked Questions for the platform.
+    """
+    question = models.CharField(max_length=500, verbose_name="Question")
+    answer = models.TextField(verbose_name="Answer")
+    order = models.PositiveIntegerField(
+        default=0, 
+        verbose_name="Order", 
+        help_text="Display order (drag-and-drop in Admin)."
+    )
+    is_published = models.BooleanField(
+        default=True, 
+        verbose_name="Published",
+        help_text="Uncheck to hide this question from the site."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "FAQ"
+        verbose_name_plural = "FAQs"
+        ordering = ["order", "-created_at"]
+
+    def __str__(self):
+        return self.question
+

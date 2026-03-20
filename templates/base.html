@@ -227,6 +227,7 @@
         </a>
         {% if user.is_authenticated %}
         <a href="{% url 'courses:category-list' %}">Courses</a>
+        <a href="{% url 'courses:faq-list' %}">FAQ</a>
         {% if user.is_staff %}
         <a href="{% url 'admin:index' %}">Admin</a>
         {% endif %}

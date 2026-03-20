@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}שאלות ותשובות — MarathonLMS{% endblock %}
+{% block extra_head %}
+<style>
+    .faq-hero {
+        padding: 48px 0 40px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 40px;
+    }
+
+    .faq-hero h1 {
+        font-size: 2.4rem;
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: -0.5px;
+        margin-bottom: 10px;
+    }
+
+    .faq-hero p {
+        color: var(--text-muted);
+        font-size: 1.05rem;
+    }
+
+    .faq-list {
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .faq-item {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        transition: border-color .2s;
+    }
+
+    .faq-item:hover {
+        border-color: var(--indigo);
+    }
+
+    .faq-question {
+        padding: 24px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--indigo-lt);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        user-select: none;
+        margin: 0;
+    }
+
+    .faq-answer {
+        padding: 0 24px 24px;
+        color: var(--text-muted);
+        display: none;
+        line-height: 1.6;
+        font-size: 0.95rem;
+    }
+
+    .faq-answer.open {
+        display: block;
+    }
+
+    .faq-icon {
+        transition: transform 0.3s ease;
+        color: var(--indigo);
+        font-size: 1.5rem;
+        line-height: 1;
+    }
+
+    .faq-icon.open {
+        transform: rotate(45deg);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 0;
+        color: var(--text-muted);
+    }
+
+    .empty-state .icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+        display: block;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="faq-hero">
+    <h1>שאלות ותשובות</h1>
+    <p>מצא תשובות לשאלות נפוצות על פלטפורמת הלמידה והקורסים שלנו.</p>
+</div>
+
+{% if faqs %}
+<div class="faq-list">
+    {% for faq in faqs %}
+    <div class="faq-item">
+        <h3 class="faq-question">
+            {{ faq.question }}
+            <span class="faq-icon">+</span>
+        </h3>
+        <div class="faq-answer">
+            {{ faq.answer|linebreaks }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <span class="icon">❓</span>
+    <p>אין כרגע שאלות ותשובות במערכת.</p>
+</div>
+{% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const questions = document.querySelectorAll(".faq-question");
+        questions.forEach(q => {
+            q.addEventListener("click", () => {
+                const answer = q.nextElementSibling;
+                const icon = q.querySelector(".faq-icon");
+
+                // Optional: Close others
+                // document.querySelectorAll('.faq-answer.open').forEach(a => {
+                //     if (a !== answer) {
+                //         a.classList.remove('open');
+                //         a.previousElementSibling.querySelector('.faq-icon').classList.remove('open');
+                //     }
+                // });
+
+                answer.classList.toggle("open");
+                icon.classList.toggle("open");
+            });
+        });
+    });
+</script>
+{% endblock %}
