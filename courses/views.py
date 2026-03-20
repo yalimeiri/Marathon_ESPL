@@ -28,7 +28,7 @@ import requests
 import json
 from django.utils import timezone
 
-from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ
 
 
 def get_effective_access_level(user, category):
@@ -416,3 +416,17 @@ def save_video(request):
 
     messages.success(request, f'✅ Video "{title}" saved successfully!')
     return redirect("courses:upload-video")
+
+
+class FAQListView(LoginRequiredMixin, ListView):
+    """
+    GET /courses/faq/
+    Lists all published FAQs.
+    """
+    model = FAQ
+    template_name = "courses/faq_list.html"
+    context_object_name = "faqs"
+
+    def get_queryset(self):
+        return FAQ.objects.filter(is_published=True).order_by('order', '-created_at')
+

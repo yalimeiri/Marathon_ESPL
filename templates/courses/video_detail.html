@@ -172,11 +172,6 @@
                     </video>
                 </div>
 
-                <!-- Dynamic Watermark Overlay (anti-piracy) -->
-                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:15; pointer-events:none; overflow:hidden;" oncontextmenu="return false;">
-                    <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;">
-                    </div>
-                </div>
 
                 <!-- The transparent overlay to absorb clicks for both dragging AND preventing native right click -->
                 <div id="video-drag-overlay"
@@ -244,6 +239,13 @@
                     <button id="btn-cancel-autoplay"
                         style="background:#475569; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem; transition:background 0.2s;">Cancel</button>
                 </div>
+
+                <!-- Dynamic Watermark (anti-piracy) -->
+                <div id="video-watermark" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; mix-blend-mode:difference;" oncontextmenu="return false;">
+                    <div id="video-watermark-inner" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;">
+                    </div>
+                </div>
+
             </div>
 
             {% endif %}
@@ -885,7 +887,7 @@
         for (let i = 0; i < count; i++) {
             const span = document.createElement('span');
             span.textContent = WATERMARK_USER;
-            span.style.cssText = 'color:rgba(255,255,255,0.07); font-size:16px; font-family:monospace; font-weight:600; letter-spacing:3px; white-space:nowrap; user-select:none; -webkit-user-select:none; pointer-events:none;';
+            span.style.cssText = 'color:rgba(255,255,255,0.25); font-size:18px; font-family:monospace; font-weight:700; letter-spacing:3px; white-space:nowrap; user-select:none; -webkit-user-select:none; pointer-events:none;';
             inner.appendChild(span);
         }
     }
@@ -899,7 +901,7 @@
             // Re-create if removed via DevTools
             wm = document.createElement('div');
             wm.id = 'video-watermark';
-            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:15; pointer-events:none; overflow:hidden;';
+            wm.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; z-index:45; pointer-events:none; overflow:hidden; mix-blend-mode:difference;';
             wm.oncontextmenu = function() { return false; };
 
             const inner = document.createElement('div');
@@ -907,13 +909,8 @@
             inner.style.cssText = 'position:absolute; top:-50%; left:-50%; width:200%; height:200%; transform:rotate(-30deg); display:flex; flex-wrap:wrap; align-content:flex-start; gap:80px 140px; padding:20px;';
             wm.appendChild(inner);
 
-            // Insert before drag overlay
-            const dragOverlay = document.getElementById('video-drag-overlay');
-            if (dragOverlay) {
-                container.insertBefore(wm, dragOverlay);
-            } else {
-                container.appendChild(wm);
-            }
+            // Append to the container (same parent as controls bar)
+            container.appendChild(wm);
         }
 
         // Ensure content exists
