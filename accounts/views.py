@@ -22,7 +22,13 @@ class RegisterView(CreateView):
 
     def form_valid(self, form):
         user = form.save()
-        login(self.request, user)
+        # Specify the backend explicitly so Django can fire the user_logged_in
+        # signal reliably (required when calling login() outside of authenticate()).
+        login(
+            self.request,
+            user,
+            backend='django.contrib.auth.backends.ModelBackend',
+        )
 
         try:
             site_url = self.request.build_absolute_uri('/courses/')
@@ -87,10 +93,9 @@ class CustomPasswordResetView(PasswordResetView):
             # Wrong device — block the reset and show a clear error
             messages.error(
                 self.request,
-                "Password reset is only allowed from the device you originally registered with. "
-                "Please use your original device/browser to reset your password."
+                "🔒 איפוס סיסמה אפשרי רק מהמכשיר המקורי שבו נרשמת. "
+                "השתמש במחשב/דפדפן המקורי שלך כדי לאפס את הסיסמה."
             )
-            # Redirect back to the reset form with the error message
             from django.shortcuts import redirect
             from django.urls import reverse
             return redirect(reverse("accounts:password_reset"))
@@ -100,7 +105,20 @@ class CustomPasswordResetView(PasswordResetView):
 
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     """
-    Standard password reset confirm — no special changes needed now that
-    the reset is only possible from the registered device.
+    After a successful password reset, clear the device UUID so that the
+    NEXT login (from any device) re-issues a fresh device lock.
+    This is safe because CustomPasswordResetView already ensures only the
+    original device can trigger the reset email.
     """
-    pass
+
+    def form_valid(self, form):
+        # Let Django save the new password first
+        response = super().form_valid(form)
+
+        # Now clear the device lock so the user can re-bind their device
+        user = self.user  # PasswordResetConfirmView sets self.user
+        if user and not user.is_staff:
+            from accounts.signals import _clear_device_uuid_for_user
+            _clear_device_uuid_for_user(user)
+
+        return response
