@@ -324,8 +324,3 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    # Allow Bunny CDN to see our domain as the Referer on cross-origin HLS requests.
-    # Django defaults to "same-origin" which strips the Referer for cross-origin
-    # requests, causing Bunny's "Block direct URL file access" to reject them.
-    SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
-
