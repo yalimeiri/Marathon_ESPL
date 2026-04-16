@@ -341,4 +341,6 @@ AXES_FAILURE_LIMIT = 5              # Lock after 5 failed attempts
 AXES_COOLOFF_TIME = 1               # 1 hour lockout
 AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]  # Track by both username and IP
 AXES_RESET_ON_SUCCESS = True        # Reset failed count after a successful login
-AXES_LOCKOUT_CALLABLE = None        # Use default 403 response
+AXES_LOCKOUT_TEMPLATE = "accounts/lockout.html"  # Friendly page instead of bare 403
+# Railway runs behind a proxy — tell axes to read the real IP from X-Forwarded-For
+AXES_PROXY_COUNT = 1
