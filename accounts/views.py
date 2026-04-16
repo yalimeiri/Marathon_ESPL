@@ -22,13 +22,7 @@ class RegisterView(CreateView):
 
     def form_valid(self, form):
         user = form.save()
-        # Specify the backend explicitly so Django can fire the user_logged_in
-        # signal reliably (required when calling login() outside of authenticate()).
-        login(
-            self.request,
-            user,
-            backend='django.contrib.auth.backends.ModelBackend',
-        )
+        login(self.request, user, backend='django.contrib.auth.backends.ModelBackend')
 
         try:
             site_url = self.request.build_absolute_uri('/courses/')
