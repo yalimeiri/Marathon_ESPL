@@ -7,11 +7,10 @@ from django.urls import path, include
 from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
-from . import webhook_views
 
 urlpatterns = [
-    # Django Admin
-    path("admin/", admin.site.urls),
+    # Django Admin (obscured URL to reduce automated attacks)
+    path("marathon-manage-X7k2/", admin.site.urls),
 
     # Accounts (login / logout / password reset — Django built-ins + custom register)
     path("accounts/", include("django.contrib.auth.urls")),
@@ -19,9 +18,6 @@ urlpatterns = [
 
     # Courses (single include — avoids W005 duplicate namespace)
     path("courses/", include("courses.urls", namespace="courses")),
-
-    # Telegram Webhook
-    path("telegram-webhook/", webhook_views.telegram_webhook, name="telegram-webhook"),
 
     # Root → redirect to course list
     path("", RedirectView.as_view(pattern_name="courses:category-list", permanent=False)),

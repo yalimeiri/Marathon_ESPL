@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 
 from decouple import Csv, config, UndefinedValueError
+import hmac
 
 # ── Base directory ──────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -73,6 +74,7 @@ INSTALLED_APPS = [
     # Third-party
     "anymail",
     "storages",
+    "axes",
     # Project apps
     "accounts.apps.AccountsConfig",
     "courses.apps.CoursesConfig",
@@ -88,6 +90,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "middleware.single_device.SingleDeviceLoginMiddleware",  # ← device-lock
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "axes.middleware.AxesMiddleware",  # ← brute-force login protection
 ]
 
 ROOT_URLCONF = "marathonlms.urls"
@@ -179,6 +182,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/courses/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
@@ -260,13 +268,16 @@ MEDIA_ROOT = BASE_DIR / "media"
 #
 #
 # ── Bunny.net Stream ────────────────────────────────────────────────────────
-BUNNY_LIBRARY_ID = config("BUNNY_LIBRARY_ID", default="613751")
-BUNNY_API_KEY = config("BUNNY_API_KEY", default="dc69dcf6-6ef3-496e-b48e29576f4d-77ee-4632")
-BUNNY_PULL_ZONE = config("BUNNY_PULL_ZONE", default="vz-0925fbfa-20e.b-cdn.net")
+# IMPORTANT: Set these in Railway env vars. Never commit real keys here.
+BUNNY_LIBRARY_ID = config("BUNNY_LIBRARY_ID", default="")
+BUNNY_API_KEY = config("BUNNY_API_KEY", default="")
+BUNNY_PULL_ZONE = config("BUNNY_PULL_ZONE", default="")
 
 # ── Telegram Webhook Settings ───────────────────────────────────────────────
-TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN", default="8227368106:AAEbSmIdTFRwy1QUoiuGMJGo8SM_Nfh5-BA")
-TELEGRAM_CHAT_ID = config("TELEGRAM_CHAT_ID", default="-5199045814")
+# IMPORTANT: Set these in Railway env vars. Never commit real tokens here.
+TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN", default="")
+TELEGRAM_CHAT_ID = config("TELEGRAM_CHAT_ID", default="")
+TELEGRAM_WEBHOOK_SECRET = config("TELEGRAM_WEBHOOK_SECRET", default="")
 
 
 # ── Device Lock ─────────────────────────────────────────────────────────────
@@ -324,3 +335,10 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# ── Django-Axes: Brute-force login protection ────────────────────────────────
+AXES_FAILURE_LIMIT = 5              # Lock after 5 failed attempts
+AXES_COOLOFF_TIME = 1               # 1 hour lockout
+AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]  # Track by both username and IP
+AXES_RESET_ON_SUCCESS = True        # Reset failed count after a successful login
+AXES_LOCKOUT_CALLABLE = None        # Use default 403 response
