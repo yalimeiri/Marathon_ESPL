@@ -26,3 +26,6 @@ django-anymail[brevo]>=10.0
 # Admin UI Package (Drag-and-Drop)
 django-admin-sortable2>=2.2.4
 django-unfold>=0.45.0
+
+# Security: Brute-force login protection
+django-axes>=8.0

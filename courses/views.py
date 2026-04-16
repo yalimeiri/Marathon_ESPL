@@ -264,107 +264,108 @@ class PaymentView(LoginRequiredMixin, DetailView):
 
 from django.views.decorators.csrf import csrf_exempt
 from datetime import timedelta
+import hmac
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 @csrf_exempt
-def telegram_webhook(request, bot_token):
+def telegram_webhook(request):
     """
-    POST /courses/webhook/telegram/<bot_token>/
+    POST /courses/webhook/telegram/
     Receives callback queries from Telegram inline keyboards (Approve/Reject).
+
+    Authentication: Uses X-Telegram-Bot-Api-Secret-Token header
+    (set when registering the webhook with Telegram Bot API).
     """
-    # Verify the incoming bot token matches our secret to prevent unauthorized requests
+    if request.method != 'POST':
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    # ── Authenticate the request via Telegram's secret token header ──
+    webhook_secret = getattr(settings, 'TELEGRAM_WEBHOOK_SECRET', '')
+    received_secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
+
+    if not webhook_secret or not hmac.compare_digest(received_secret, webhook_secret):
+        logger.warning("Telegram webhook: unauthorized request (bad or missing secret token).")
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
     config = SiteConfiguration.get_solo()
     configured_token = config.telegram_bot_token or settings.TELEGRAM_BOT_TOKEN
-    if bot_token != configured_token:
-        return JsonResponse({"error": "Unauthorized"}, status=403)
 
-    if request.method == 'POST':
-        try:
-            payload = json.loads(request.body)
-            
-            # We only care about button clicks: 'callback_query'
-            if 'callback_query' in payload:
-                callback_query = payload['callback_query']
-                callback_id = callback_query.get('id')
-                data = callback_query.get('data', '')
-                message = callback_query.get('message', {})
-                chat_id = message.get('chat', {}).get('id') or config.telegram_chat_id or settings.TELEGRAM_CHAT_ID
-                message_id = message.get('message_id')
-                
-                # Check for our action prefixes
-                if data.startswith('approve_') or data.startswith('reject_'):
-                    action, purchase_id_str = data.split('_', 1)
-                    
-                    try:
-                        purchase = Purchase.objects.filter(id=int(purchase_id_str)).first()
-                        if not purchase:
-                            requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": chat_id, "text": f"Error: Purchase #{purchase_id_str} not found in database!"})
-                            requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Failed."})
-                            return JsonResponse({"status": "ok"})
-                            
-                        category_access = CategoryAccess.objects.filter(user=purchase.user, category=purchase.category).first()
-                        if not category_access:
-                            requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": chat_id, "text": f"Error: No CategoryAccess found for Purchase #{purchase_id_str} (User: {purchase.user})."})
-                            requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Failed."})
-                            return JsonResponse({"status": "ok"})
-                        
-                        action_text = ""
-                        
-                        if action == 'approve':
-                            purchase.status = 'APPROVED'
-                            purchase.save()
-                            
-                            category_access.access_level = AccessTier.PURCHASED
-                            category_access.expires_at = timezone.now() + timedelta(days=120)  # 4 months
-                            category_access.save()
-                            action_text = "✅ Approved "
-                            
-                        elif action == 'reject':
-                            purchase.status = 'REJECTED'
-                            purchase.save()
-                            
-                            category_access.access_level = AccessTier.VISITING
-                            category_access.expires_at = None
-                            category_access.save()
-                            action_text = "❌ Rejected "
-                            
-                        # Answer the callback query to stop the loading animation on the Telegram button
-                        answer_url = f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery"
-                        requests.post(answer_url, json={"callback_query_id": callback_id, "text": f"Status updated to {purchase.status}"})
-                        
-                        # Edit the original message to reflect the new state and remove buttons
-                        if chat_id and message_id:
-                            edit_url = f"https://api.telegram.org/bot{configured_token}/editMessageText"
-                            new_text = f"{message.get('text', '')}\n\n{action_text}by Admin."
-                            requests.post(edit_url, json={
-                                "chat_id": chat_id,
-                                "message_id": message_id,
-                                "text": new_text
-                            })
-                            
-                    except Exception as e:
-                        # Send detailed error log to telegram directly
-                        err_msg = f"Webhook Error on {action}_{purchase_id_str}: {str(e)}"
-                        requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": chat_id, "text": err_msg})
-                        requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Internal error occurred."})
+    try:
+        payload = json.loads(request.body)
 
-        except Exception as e:
-            # Broadest exception sent to telegram chat
-             requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": '-5199045814', "text": f"Major Webhook Parsing Error: {str(e)}"})
+        # We only care about button clicks: 'callback_query'
+        if 'callback_query' in payload:
+            callback_query = payload['callback_query']
+            callback_id = callback_query.get('id')
+            data = callback_query.get('data', '')
+            message = callback_query.get('message', {})
+            chat_id = message.get('chat', {}).get('id') or config.telegram_chat_id or settings.TELEGRAM_CHAT_ID
+            message_id = message.get('message_id')
+
+            # Check for our action prefixes
+            if data.startswith('approve_') or data.startswith('reject_'):
+                action, purchase_id_str = data.split('_', 1)
+
+                try:
+                    purchase = Purchase.objects.filter(id=int(purchase_id_str)).first()
+                    if not purchase:
+                        requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": chat_id, "text": f"Error: Purchase #{purchase_id_str} not found in database!"})
+                        requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Failed."})
+                        return JsonResponse({"status": "ok"})
+
+                    category_access = CategoryAccess.objects.filter(user=purchase.user, category=purchase.category).first()
+                    if not category_access:
+                        requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": chat_id, "text": f"Error: No CategoryAccess found for Purchase #{purchase_id_str} (User: {purchase.user})."})
+                        requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Failed."})
+                        return JsonResponse({"status": "ok"})
+
+                    action_text = ""
+
+                    if action == 'approve':
+                        purchase.status = 'APPROVED'
+                        purchase.save()
+
+                        category_access.access_level = AccessTier.PURCHASED
+                        category_access.expires_at = timezone.now() + timedelta(days=120)  # 4 months
+                        category_access.save()
+                        action_text = "✅ Approved "
+
+                    elif action == 'reject':
+                        purchase.status = 'REJECTED'
+                        purchase.save()
+
+                        category_access.access_level = AccessTier.VISITING
+                        category_access.expires_at = None
+                        category_access.save()
+                        action_text = "❌ Rejected "
+
+                    # Answer the callback query to stop the loading animation on the Telegram button
+                    answer_url = f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery"
+                    requests.post(answer_url, json={"callback_query_id": callback_id, "text": f"Status updated to {purchase.status}"})
+
+                    # Edit the original message to reflect the new state and remove buttons
+                    if chat_id and message_id:
+                        edit_url = f"https://api.telegram.org/bot{configured_token}/editMessageText"
+                        new_text = f"{message.get('text', '')}\n\n{action_text}by Admin."
+                        requests.post(edit_url, json={
+                            "chat_id": chat_id,
+                            "message_id": message_id,
+                            "text": new_text
+                        })
+
+                except Exception as e:
+                    # Send detailed error log to telegram directly
+                    err_msg = f"Webhook Error on {action}_{purchase_id_str}: {str(e)}"
+                    requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": chat_id, "text": err_msg})
+                    requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Internal error occurred."})
+
+    except Exception as e:
+        logger.error("Telegram webhook parsing error: %s", str(e))
 
     return JsonResponse({"status": "ok"})
-
-
-def debug_purchases(request):
-    """Temporary endpoint to check production purchases"""
-    if request.GET.get('token') != 'abcd123':
-        return JsonResponse({"error": "Unauthorized"}, status=403)
-    purchases = Purchase.objects.all().order_by('-created_at')[:5]
-    return JsonResponse({
-        "purchases": [
-            {"id": p.id, "user": p.user.username, "status": p.status, "date": str(p.created_at)} 
-            for p in purchases
-        ]
-    })
 
 
 # ── Upload Manager (superuser only) ─────────────────────────────────────────
