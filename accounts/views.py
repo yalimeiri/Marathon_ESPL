@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
 from .forms import CustomUserCreationForm
+from courses.free_access import try_grant_free_access
 
 User = get_user_model()
 
@@ -23,6 +24,16 @@ class RegisterView(CreateView):
     def form_valid(self, form):
         user = form.save()
         login(self.request, user, backend='django.contrib.auth.backends.ModelBackend')
+
+        # ── Free Access Campaign ──────────────────────────────────────────
+        # If an active campaign has slots remaining, grant the user free
+        # PURCHASED-level access to the campaign's included categories.
+        slot_granted = try_grant_free_access(user)
+        if slot_granted:
+            messages.success(
+                self.request,
+                "🎉 מזל טוב! קיבלת גישה חינמית לכל הקורסים הכלולים במבצע!"
+            )
 
         try:
             site_url = self.request.build_absolute_uri('/courses/')

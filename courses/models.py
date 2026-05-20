@@ -46,7 +46,108 @@ class SiteConfiguration(models.Model):
         return obj
 
 
+class FreeAccessCampaign(models.Model):
+    """
+    Defines a free-access campaign that grants PURCHASED-level access to a
+    configurable set of categories for the first N registered users.
+
+    Only one campaign should be active at a time.
+    Deactivating a campaign (is_active=False) immediately revokes all
+    CategoryAccess records that were granted by this campaign.
+    """
+
+    is_active = models.BooleanField(
+        default=False,
+        verbose_name="Active",
+        help_text="Enable to start granting free slots. Disable to immediately revoke all free access granted by this campaign."
+    )
+    slot_limit = models.PositiveIntegerField(
+        default=100,
+        verbose_name="Slot Limit",
+        help_text="Maximum number of users who can claim a free slot (e.g. 50, 100)."
+    )
+    included_categories = models.ManyToManyField(
+        'Category',
+        blank=True,
+        verbose_name="Included Categories",
+        help_text="Users will get free PURCHASED access ONLY to the categories selected here."
+    )
+    access_duration_days = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Access Duration (days)",
+        help_text="How many days the free access lasts. Leave blank for access that never expires."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Free Access Campaign"
+        verbose_name_plural = "Free Access Campaigns"
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"Campaign #{self.pk} — {status} (limit={self.slot_limit})"
+
+    @property
+    def slots_used(self):
+        """Number of slots consumed (only counting those marked as counting)."""
+        return self.slots.filter(counts_toward_limit=True).count()
+
+    @property
+    def slots_remaining(self):
+        """Slots still available for new registrations."""
+        return max(0, self.slot_limit - self.slots_used)
+
+    @property
+    def is_full(self):
+        """True when no more slots are available."""
+        return self.slots_remaining == 0
+
+
+class FreeAccessSlot(models.Model):
+    """
+    Records that a specific user received a free slot from a campaign.
+    Admins can:
+      - View all slot holders.
+      - Toggle counts_toward_limit to free up a slot without revoking access.
+      - Add notes (e.g. "manually added", "test user").
+    """
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='free_access_slot',
+        verbose_name="User"
+    )
+    campaign = models.ForeignKey(
+        FreeAccessCampaign,
+        on_delete=models.CASCADE,
+        related_name='slots',
+        verbose_name="Campaign"
+    )
+    granted_at = models.DateTimeField(auto_now_add=True)
+    counts_toward_limit = models.BooleanField(
+        default=True,
+        verbose_name="Counts Toward Limit",
+        help_text="Uncheck to exclude this user from the slot counter, freeing up a slot for someone else."
+    )
+    note = models.TextField(
+        blank=True,
+        verbose_name="Admin Note",
+        help_text="Optional note (e.g. 'manually granted', 'test account')."
+    )
+
+    class Meta:
+        verbose_name = "Free Access Slot"
+        verbose_name_plural = "Free Access Slots"
+        ordering = ['-granted_at']
+
+    def __str__(self):
+        return f"{self.user.username} → {self.campaign}"
+
+
 class AccessTier(models.IntegerChoices):
+
     VISITING = 0, 'Visiting'
     PENDING = 1, 'Pending'
     PURCHASED = 2, 'Purchased'
@@ -249,6 +350,28 @@ class Video(models.Model):
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
+
+
+@receiver(post_save, sender=FreeAccessCampaign)
+def on_campaign_save(sender, instance, **kwargs):
+    """
+    When a campaign is deactivated (is_active flips to False), immediately
+    revoke PURCHASED-level CategoryAccess for every user who received a free
+    slot through this campaign, resetting them to VISITING.
+
+    If the campaign is activated again, existing slot holders are NOT
+    automatically re-granted (admin must re-enable manually or the user
+    must register a new slot).
+    """
+    if not instance.is_active:
+        slot_user_ids = instance.slots.values_list('user_id', flat=True)
+        included_category_ids = instance.included_categories.values_list('id', flat=True)
+        # Only revoke accesses that are still at PURCHASED level
+        CategoryAccess.objects.filter(
+            user_id__in=slot_user_ids,
+            category_id__in=included_category_ids,
+            access_level=AccessTier.PURCHASED,
+        ).update(access_level=AccessTier.VISITING, expires_at=None)
 from datetime import timedelta
 
 @receiver(post_save, sender=Purchase)
