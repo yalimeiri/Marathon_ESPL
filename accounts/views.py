@@ -68,44 +68,42 @@ class CustomPasswordResetView(PasswordResetView):
       - Only the original registered device/browser can request a password reset.
     """
 
-    def form_valid(self, form):
+    def _device_allows_password_reset(self, user):
+        """Return True if this user may request a reset from the current browser."""
         from middleware.single_device import _unsign
 
-        email = form.cleaned_data.get("email", "").strip().lower()
-        try:
-            user = User.objects.get(email__iexact=email)
-        except User.DoesNotExist:
-            # Let Django handle non-existent emails (silently ignores them)
-            return super().form_valid(form)
+        if not user.device_uuid or user.is_staff:
+            return True
 
-        # If the user has no device_uuid yet, they haven't logged in from any
-        # device, so no restriction applies.
-        if not user.device_uuid:
-            return super().form_valid(form)
-
-        # Staff/superusers can reset from any device
-        if user.is_staff:
-            return super().form_valid(form)
-
-        # Check the device cookie in the current browser
         base_cookie_name = getattr(settings, "DEVICE_COOKIE_NAME", "device_token")
         cookie_name = f"{base_cookie_name}_{user.pk}"
         signed_token = self.request.COOKIES.get(cookie_name)
         token_value = _unsign(signed_token) if signed_token else None
-        db_uuid = str(user.device_uuid)
+        return token_value == str(user.device_uuid)
 
-        if token_value != db_uuid:
-            # Wrong device — block the reset and show a clear error
-            messages.error(
-                self.request,
-                "Password reset is only allowed from the device you originally registered with. "
-                "Please use your original device/browser to reset your password."
-            )
-            # Redirect back to the reset form with the error message
-            from django.shortcuts import redirect
-            from django.urls import reverse
-            return redirect(reverse("accounts:password_reset"))
+    def form_valid(self, form):
+        from django.shortcuts import redirect
+        from django.urls import reverse
 
+        email = form.cleaned_data.get("email", "").strip().lower()
+        users = User.objects.filter(email__iexact=email)
+
+        if not users.exists():
+            # Let Django handle non-existent emails (silently ignores them)
+            return super().form_valid(form)
+
+        if users.count() == 1:
+            user = users.first()
+            if not self._device_allows_password_reset(user):
+                messages.error(
+                    self.request,
+                    "Password reset is only allowed from the device you originally registered with. "
+                    "Please use your original device/browser to reset your password."
+                )
+                return redirect(reverse("accounts:password_reset"))
+
+        # Multiple accounts share this email — device ownership is ambiguous,
+        # so skip the device check and let Django email all matching accounts.
         return super().form_valid(form)
 
 

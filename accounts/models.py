@@ -1,9 +1,11 @@
 import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class CustomUser(AbstractUser):
+    email = models.EmailField(_("email address"), blank=True, unique=True)
     """
     Extends Django's built-in AbstractUser with a device_uuid field used
     by the SingleDeviceLoginMiddleware to enforce single-device login.
