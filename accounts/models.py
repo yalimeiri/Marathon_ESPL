@@ -5,7 +5,6 @@ from django.utils.translation import gettext_lazy as _
 
 
 class CustomUser(AbstractUser):
-    email = models.EmailField(_("email address"), blank=True, unique=True)
     """
     Extends Django's built-in AbstractUser with a device_uuid field used
     by the SingleDeviceLoginMiddleware to enforce single-device login.
@@ -13,6 +12,8 @@ class CustomUser(AbstractUser):
     device_uuid is nullable — a NULL value means "no active device lock"
     (e.g. after an admin reset, the next login will re-issue a new UUID).
     """
+
+    email = models.EmailField(_("email address"), blank=True, null=True)
 
     device_uuid = models.UUIDField(
         null=True,
