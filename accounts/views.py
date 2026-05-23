@@ -5,10 +5,13 @@ from django.contrib.auth.views import PasswordResetView, PasswordResetConfirmVie
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
+import logging
+
 from .forms import CustomUserCreationForm
 from courses.free_access import try_grant_free_access
 
 User = get_user_model()
+logger = logging.getLogger("marathonlms.email")
 
 
 class RegisterView(CreateView):
@@ -68,6 +71,11 @@ class CustomPasswordResetView(PasswordResetView):
       - Only the original registered device/browser can request a password reset.
     """
 
+    email_template_name = "registration/password_reset_email.txt"
+    html_email_template_name = "registration/password_reset_email.html"
+    subject_template_name = "registration/password_reset_subject.txt"
+    success_url = reverse_lazy("password_reset_done")
+
     def _device_allows_password_reset(self, user):
         """Return True if this user may request a reset from the current browser."""
         from middleware.single_device import _unsign
@@ -104,7 +112,15 @@ class CustomPasswordResetView(PasswordResetView):
 
         # Multiple accounts share this email — device ownership is ambiguous,
         # so skip the device check and let Django email all matching accounts.
-        return super().form_valid(form)
+        try:
+            return super().form_valid(form)
+        except Exception:
+            logger.exception("Password reset email failed for %s", email)
+            messages.error(
+                self.request,
+                "We could not send the reset email. Please try again later or contact support.",
+            )
+            return redirect(reverse("accounts:password_reset"))
 
 
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):

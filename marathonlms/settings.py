@@ -194,6 +194,10 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 # ── Email ────────────────────────────────────────────────────────────────────
 # Uses SMTP in production (configure via environment variables on Railway).
 # Falls back to console backend in development (emails print to terminal).
+import logging
+
+_email_logger = logging.getLogger("marathonlms.email")
+
 _EMAIL_HOST = config("EMAIL_HOST", default="")
 _BREVO_API_KEY = config("BREVO_API_KEY", default="")
 
@@ -204,6 +208,18 @@ if _BREVO_API_KEY:
         "BREVO_API_KEY": _BREVO_API_KEY,
     }
     DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="")
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+    if not DEFAULT_FROM_EMAIL:
+        if not DEBUG:
+            from django.core.exceptions import ImproperlyConfigured
+
+            raise ImproperlyConfigured(
+                "DEFAULT_FROM_EMAIL must be set when using BREVO_API_KEY. "
+                "Use a sender address verified in your Brevo dashboard."
+            )
+        _email_logger.warning(
+            "BREVO_API_KEY is set but DEFAULT_FROM_EMAIL is empty — emails will fail."
+        )
 elif _EMAIL_HOST:
     # ── Fallback: SMTP (may be blocked by Railway) ───────────────────────────
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -315,6 +331,11 @@ LOGGING = {
             "propagate": False,
         },
         "middleware.single_device": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "marathonlms.email": {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
