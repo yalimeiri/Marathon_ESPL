@@ -237,8 +237,10 @@
         </form>
         {% else %}
         <a href="{% url 'login' %}">Login</a>
+        {% if ALLOW_EMAIL_REGISTRATION %}
         <a href="{% url 'accounts:register' %}"
             style="color:#fff;background:var(--indigo);padding:6px 16px;border-radius:8px;">Sign up</a>
+        {% endif %}
         {% endif %}
     </nav>
 
