@@ -5,6 +5,7 @@ from django.contrib.auth.views import PasswordResetView, PasswordResetConfirmVie
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
+from django.http import Http404
 import logging
 
 from .forms import CustomUserCreationForm
@@ -23,6 +24,11 @@ class RegisterView(CreateView):
     form_class = CustomUserCreationForm
     template_name = 'registration/register.html'
     success_url = reverse_lazy('courses:category-list')
+
+    def dispatch(self, request, *args, **kwargs):
+        if not getattr(settings, "ALLOW_EMAIL_REGISTRATION", True):
+            raise Http404
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         user = form.save()
@@ -63,6 +69,7 @@ class RegisterView(CreateView):
 class CustomPasswordResetView(PasswordResetView):
     """
     Override PasswordResetView to block reset requests from unauthorized devices.
+    Also disabled entirely when ALLOW_EMAIL_REGISTRATION is False (Google-only prod).
 
     SECURITY POLICY:
       - If the email belongs to a user who has a registered device (device_uuid set),
@@ -75,6 +82,11 @@ class CustomPasswordResetView(PasswordResetView):
     html_email_template_name = "registration/password_reset_email.html"
     subject_template_name = "registration/password_reset_subject.txt"
     success_url = reverse_lazy("password_reset_done")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not getattr(settings, "ALLOW_EMAIL_REGISTRATION", True):
+            raise Http404
+        return super().dispatch(request, *args, **kwargs)
 
     def _device_allows_password_reset(self, user):
         """Return True if this user may request a reset from the current browser."""

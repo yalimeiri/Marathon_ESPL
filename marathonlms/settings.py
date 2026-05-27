@@ -114,6 +114,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "accounts.context_processors.registration_settings",
             ],
         },
     },
@@ -210,6 +211,11 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True  # Link Google to existing email/password accounts
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
+
+# ── Registration mode ────────────────────────────────────────────────────────
+# True  → dev: email/password register + password reset available
+# False → prod: Google sign-in only, register/reset pages return 404
+ALLOW_EMAIL_REGISTRATION = config("ALLOW_EMAIL_REGISTRATION", default=True, cast=bool)
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
