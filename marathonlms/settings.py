@@ -75,6 +75,13 @@ INSTALLED_APPS = [
     "anymail",
     "storages",
     "axes",
+    # Django Sites (required by allauth)
+    "django.contrib.sites",
+    # Google OAuth / Social Login
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     # Project apps
     "accounts.apps.AccountsConfig",
     "courses.apps.CoursesConfig",
@@ -91,6 +98,7 @@ MIDDLEWARE = [
     "middleware.single_device.SingleDeviceLoginMiddleware",  # ← device-lock
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "axes.middleware.AxesMiddleware",  # ← brute-force login protection
+    "allauth.account.middleware.AccountMiddleware",  # ← required by allauth
 ]
 
 ROOT_URLCONF = "marathonlms.urls"
@@ -185,11 +193,34 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/courses/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
+
+# ── Django Sites (required by allauth) ──────────────────────────────────────
+SITE_ID = 1
+
+# ── Allauth / Google OAuth ───────────────────────────────────────────────────
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_UNIQUE_EMAIL = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True  # Link Google to existing email/password accounts
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": config("GOOGLE_CLIENT_ID", default=""),
+            "secret": config("GOOGLE_CLIENT_SECRET", default=""),
+            "key": "",
+        },
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+    }
+}
 
 # ── Email ────────────────────────────────────────────────────────────────────
 # Uses SMTP in production (configure via environment variables on Railway).

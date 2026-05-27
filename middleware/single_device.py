@@ -133,9 +133,13 @@ class SingleDeviceLoginMiddleware:
         login_url  = getattr(settings, "LOGIN_URL",  "/accounts/login/")
         logout_url = getattr(settings, "LOGOUT_URL", "/accounts/logout/")
         register_url = "/accounts/register/"
-        if (path.startswith(login_url) or 
-            path.startswith(logout_url) or 
-            path.startswith(register_url)):
+        # Bypass allauth OAuth flow paths (user is unauthenticated during these,
+        # but bypass is explicit for safety with allauth's intermediate pages).
+        if (path.startswith(login_url) or
+            path.startswith(logout_url) or
+            path.startswith(register_url) or
+            path.startswith("/accounts/google/") or
+            path.startswith("/accounts/social/")):
             return None
 
         # Read and validate the signed cookie.
