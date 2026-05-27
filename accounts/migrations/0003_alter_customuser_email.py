@@ -46,7 +46,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(cleanup_emails, migrations.RunPython.noop),
+        # AlterField must come first so the column allows NULL before the
+        # data cleanup sets empty emails to None. PostgreSQL enforces this
+        # strictly (unlike SQLite which is lenient during migrations).
         migrations.AlterField(
             model_name="customuser",
             name="email",
@@ -57,4 +59,5 @@ class Migration(migrations.Migration):
                 verbose_name="email address",
             ),
         ),
+        migrations.RunPython(cleanup_emails, migrations.RunPython.noop),
     ]
