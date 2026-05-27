@@ -204,7 +204,7 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 SITE_ID = 1
 
 # ── Allauth / Google OAuth ───────────────────────────────────────────────────
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 ACCOUNT_UNIQUE_EMAIL = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True  # Link Google to existing email/password accounts
@@ -395,4 +395,4 @@ AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]  # Track by both username a
 AXES_RESET_ON_SUCCESS = True        # Reset failed count after a successful login
 AXES_LOCKOUT_TEMPLATE = "accounts/lockout.html"  # Friendly page instead of bare 403
 # Railway runs behind a proxy — tell axes to read the real IP from X-Forwarded-For
-AXES_PROXY_COUNT = 1
+AXES_IPWARE_PROXY_COUNT = 1
