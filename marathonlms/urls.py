@@ -15,6 +15,8 @@ urlpatterns = [
     # Accounts (login / logout / password reset — Django built-ins + custom register)
     path("accounts/", include("django.contrib.auth.urls")),
     path("accounts/", include("accounts.urls", namespace="accounts")),
+    # Google OAuth (allauth)
+    path("accounts/", include("allauth.urls")),
 
     # Courses (single include — avoids W005 duplicate namespace)
     path("courses/", include("courses.urls", namespace="courses")),

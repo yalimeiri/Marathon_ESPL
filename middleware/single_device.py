@@ -24,7 +24,7 @@ LOGIN  (accounts/signals.py + this middleware's __call__ post-view section)
 EVERY SUBSEQUENT REQUEST  (pre-view in __call__)
   1. Skip unauthenticated users.
   2. Bypass staff / superusers entirely.
-  3. Bypass /login, /logout, /register (prevent redirect loops).
+  3. Bypass /login, /logout, /register, and allauth OAuth paths.
   4. Read the signed cookie.
   5. Cookie missing or bad signature → force logout.
   6. Cookie UUID ≠ user.device_uuid in DB → force logout.
@@ -130,13 +130,17 @@ class SingleDeviceLoginMiddleware:
 
         # Bypass auth-related URLs to prevent redirect loops.
         path = request.path_info
-        login_url   = getattr(settings, "LOGIN_URL",  "/accounts/login/")
-        logout_url  = getattr(settings, "LOGOUT_URL", "/accounts/logout/")
+        login_url  = getattr(settings, "LOGIN_URL",  "/accounts/login/")
+        logout_url = getattr(settings, "LOGOUT_URL", "/accounts/logout/")
         register_url = "/accounts/register/"
+        # Bypass allauth OAuth flow paths (user is unauthenticated during these,
+        # but the explicit bypass guards against edge cases with intermediate pages).
         if (
             path.startswith(login_url)
             or path.startswith(logout_url)
             or path.startswith(register_url)
+            or path.startswith("/accounts/google/")
+            or path.startswith("/accounts/social/")
         ):
             return None
 

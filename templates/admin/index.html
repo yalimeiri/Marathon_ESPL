@@ -43,6 +43,82 @@
 
     </div>
 
+    <!-- Free Access Campaign Card (full width) -->
+    {% if active_campaign %}
+    {% component "unfold/components/card.html" with title="Free Access Campaign" %}
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-2">
+            <!-- Status badge -->
+            <div class="flex items-center gap-3">
+                {% if active_campaign.is_active %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                        <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Active
+                    </span>
+                {% else %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 dark:bg-red-900/40 px-3 py-1 text-xs font-semibold text-red-600 dark:text-red-400">
+                        <span class="inline-block w-2 h-2 rounded-full bg-red-400"></span>
+                        Inactive
+                    </span>
+                {% endif %}
+                <span class="text-sm text-gray-500 dark:text-gray-400">
+                    Campaign #{{ active_campaign.pk }}
+                    {% if active_campaign.access_duration_days %}
+                        &nbsp;·&nbsp; {{ active_campaign.access_duration_days }} days access
+                    {% else %}
+                        &nbsp;·&nbsp; Unlimited access
+                    {% endif %}
+                </span>
+            </div>
+            <!-- Slot counter -->
+            <div class="text-right">
+                <span class="text-2xl font-bold {% if free_slots_pct >= 100 %}text-red-500{% elif free_slots_pct >= 80 %}text-amber-500{% else %}text-emerald-600{% endif %}">
+                    {{ free_slots_used }} / {{ free_slot_limit }}
+                </span>
+                <span class="text-sm text-gray-400 dark:text-gray-500 ml-1">slots used</span>
+            </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="mt-4">
+            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <span>{{ free_slots_pct }}% filled</span>
+                <span>{{ free_slots_remaining }} remaining</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div class="h-3 rounded-full transition-all duration-500
+                    {% if free_slots_pct >= 100 %}bg-red-500{% elif free_slots_pct >= 80 %}bg-amber-400{% else %}bg-emerald-500{% endif %}"
+                    style="width: {{ free_slots_pct }}%;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Included categories -->
+        <div class="mt-4">
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Included Categories</p>
+            <div class="flex flex-wrap gap-2">
+                {% for cat in active_campaign.included_categories.all %}
+                    <span class="inline-block rounded-full bg-primary-100 dark:bg-primary-900/30 px-3 py-0.5 text-xs font-medium text-primary-700 dark:text-primary-300">
+                        {{ cat.name }}
+                    </span>
+                {% empty %}
+                    <span class="text-xs text-gray-400">No categories selected.</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Quick link -->
+        <div class="mt-4 flex gap-3">
+            <a href="/admin/courses/freeaccessslot/" class="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline">
+                View Slot Holders →
+            </a>
+            <a href="/admin/courses/freeaccesscampaign/{{ active_campaign.pk }}/change/" class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:underline">
+                Edit Campaign →
+            </a>
+        </div>
+    {% endcomponent %}
+    {% endif %}
+
+
     <!-- Sales Table / Original Index Content -->
     <div class="flex flex-col xl:flex-row xl:gap-8">
         <div class="grow flex flex-col gap-8">

@@ -75,6 +75,13 @@ INSTALLED_APPS = [
     "anymail",
     "storages",
     "axes",
+    # Django Sites (required by allauth)
+    "django.contrib.sites",
+    # Google OAuth / Social Login
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     # Project apps
     "accounts.apps.AccountsConfig",
     "courses.apps.CoursesConfig",
@@ -91,6 +98,7 @@ MIDDLEWARE = [
     "middleware.single_device.SingleDeviceLoginMiddleware",  # ← device-lock
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "axes.middleware.AxesMiddleware",  # ← brute-force login protection
+    "allauth.account.middleware.AccountMiddleware",  # ← required by allauth
 ]
 
 ROOT_URLCONF = "marathonlms.urls"
@@ -106,6 +114,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "accounts.context_processors.registration_settings",
             ],
         },
     },
@@ -185,15 +194,48 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/courses/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
+# ── Django Sites (required by allauth) ──────────────────────────────────────
+SITE_ID = 1
+
+# ── Allauth / Google OAuth ───────────────────────────────────────────────────
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+ACCOUNT_UNIQUE_EMAIL = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True  # Link Google to existing email/password accounts
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
+# ── Registration mode ────────────────────────────────────────────────────────
+# True  → dev: email/password register + password reset available
+# False → prod: Google sign-in only, register/reset pages return 404
+ALLOW_EMAIL_REGISTRATION = config("ALLOW_EMAIL_REGISTRATION", default=True, cast=bool)
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": config("GOOGLE_CLIENT_ID", default=""),
+            "secret": config("GOOGLE_CLIENT_SECRET", default=""),
+            "key": "",
+        },
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+    }
+}
+
 # ── Email ────────────────────────────────────────────────────────────────────
 # Uses SMTP in production (configure via environment variables on Railway).
 # Falls back to console backend in development (emails print to terminal).
+import logging
+
+_email_logger = logging.getLogger("marathonlms.email")
+
 _EMAIL_HOST = config("EMAIL_HOST", default="")
 _BREVO_API_KEY = config("BREVO_API_KEY", default="")
 
@@ -204,6 +246,18 @@ if _BREVO_API_KEY:
         "BREVO_API_KEY": _BREVO_API_KEY,
     }
     DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="")
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+    if not DEFAULT_FROM_EMAIL:
+        if not DEBUG:
+            from django.core.exceptions import ImproperlyConfigured
+
+            raise ImproperlyConfigured(
+                "DEFAULT_FROM_EMAIL must be set when using BREVO_API_KEY. "
+                "Use a sender address verified in your Brevo dashboard."
+            )
+        _email_logger.warning(
+            "BREVO_API_KEY is set but DEFAULT_FROM_EMAIL is empty — emails will fail."
+        )
 elif _EMAIL_HOST:
     # ── Fallback: SMTP (may be blocked by Railway) ───────────────────────────
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -319,6 +373,11 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        "marathonlms.email": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 
@@ -343,4 +402,4 @@ AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]  # Track by both username a
 AXES_RESET_ON_SUCCESS = True        # Reset failed count after a successful login
 AXES_LOCKOUT_TEMPLATE = "accounts/lockout.html"  # Friendly page instead of bare 403
 # Railway runs behind a proxy — tell axes to read the real IP from X-Forwarded-For
-AXES_PROXY_COUNT = 1
+AXES_IPWARE_PROXY_COUNT = 1

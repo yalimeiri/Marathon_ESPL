@@ -1,7 +1,7 @@
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from datetime import timedelta
-from courses.models import Purchase, CategoryAccess, Category
+from courses.models import Purchase, CategoryAccess, Category, FreeAccessCampaign
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -52,6 +52,13 @@ def dashboard_callback(request, context):
         expires_at__lte=in_7_days
     ).count()
 
+    # 7. Free Access Campaign stats
+    active_campaign = FreeAccessCampaign.objects.filter(is_active=True).first()
+    free_slots_used = active_campaign.slots_used if active_campaign else 0
+    free_slot_limit = active_campaign.slot_limit if active_campaign else 0
+    free_slots_remaining = active_campaign.slots_remaining if active_campaign else 0
+    free_slots_pct = int((free_slots_used / free_slot_limit) * 100) if free_slot_limit > 0 else 0
+
     # Inject into context for use in our custom admin/index.html template
     context.update({
         "total_revenue": total_revenue,
@@ -60,6 +67,11 @@ def dashboard_callback(request, context):
         "pending_approvals": pending_approvals,
         "sales_per_course": sales_per_course,
         "expiring_soon": expiring_soon,
+        "active_campaign": active_campaign,
+        "free_slots_used": free_slots_used,
+        "free_slot_limit": free_slot_limit,
+        "free_slots_remaining": free_slots_remaining,
+        "free_slots_pct": free_slots_pct,
     })
 
     return context

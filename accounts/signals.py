@@ -24,6 +24,8 @@ import logging
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.conf import settings
 
 logger = logging.getLogger("middleware.single_device")
 
@@ -68,3 +70,40 @@ def _clear_device_uuid_for_user(user):
             "Next login will re-issue a new device lock.",
             user.username,
         )
+
+
+def on_google_signup(sender, request, user, sociallogin=None, **kwargs):
+    """
+    Fires when a brand-new user completes registration via Google OAuth.
+    Sends a welcome email identical to the one RegisterView sends.
+    """
+    # Only send for social signups; plain allauth email signups pass sociallogin=None.
+    if sociallogin is None or not user.email:
+        return
+    try:
+        site_url = request.build_absolute_uri('/courses/')
+        send_mail(
+            subject="ברוך הבא ל-TheFlyingSquirrel!",
+            message=(
+                f"שלום {user.username},\n\n"
+                f"ההרשמה שלך הסתיימה בהצלחה!\n\n"
+                f"שם משתמש: {user.username}\n\n"
+                f"כדי להיכנס לאתר: {site_url}\n\n"
+                f"שים לב: החשבון שלך נעול למחשב/דפדפן שבו נרשמת.\n\n"
+                f"בברכה,\nצוות TheFlyingSquirrel"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=True,
+        )
+    except Exception:
+        pass
+
+
+# Connect to allauth's user_signed_up signal (fires only for brand-new registrations,
+# not for existing users logging in with Google).
+try:
+    from allauth.account.signals import user_signed_up
+    user_signed_up.connect(on_google_signup)
+except ImportError:
+    pass

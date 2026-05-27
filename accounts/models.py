@@ -1,6 +1,7 @@
 import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class CustomUser(AbstractUser):
@@ -11,6 +12,8 @@ class CustomUser(AbstractUser):
     device_uuid is nullable — a NULL value means "no active device lock"
     (e.g. after an admin reset, the next login will re-issue a new UUID).
     """
+
+    email = models.EmailField(_("email address"), blank=True, null=True)
 
     device_uuid = models.UUIDField(
         null=True,

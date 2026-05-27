@@ -28,4 +28,7 @@ django-admin-sortable2>=2.2.4
 django-unfold>=0.45.0
 
 # Security: Brute-force login protection
-django-axes>=8.0
+django-axes>=8.0
+
+# Google OAuth / Social Login
+django-allauth[socialaccount]>=0.63.0

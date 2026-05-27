@@ -5,9 +5,14 @@ from django.contrib.auth.views import PasswordResetView, PasswordResetConfirmVie
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
+from django.http import Http404
+import logging
+
 from .forms import CustomUserCreationForm
+from courses.free_access import try_grant_free_access
 
 User = get_user_model()
+logger = logging.getLogger("marathonlms.email")
 
 
 class RegisterView(CreateView):
@@ -20,9 +25,22 @@ class RegisterView(CreateView):
     template_name = 'registration/register.html'
     success_url = reverse_lazy('courses:category-list')
 
+    def dispatch(self, request, *args, **kwargs):
+        if not getattr(settings, "ALLOW_EMAIL_REGISTRATION", True):
+            raise Http404
+        return super().dispatch(request, *args, **kwargs)
+
     def form_valid(self, form):
         user = form.save()
         login(self.request, user, backend='django.contrib.auth.backends.ModelBackend')
+
+        # ── Free Access Campaign ──────────────────────────────────────────
+        slot_granted = try_grant_free_access(user)
+        if slot_granted:
+            messages.success(
+                self.request,
+                "🎉 מזל טוב! קיבלת גישה חינמית לכל הקורסים הכלולים במבצע!"
+            )
 
         try:
             site_url = self.request.build_absolute_uri('/courses/')
@@ -49,6 +67,7 @@ class RegisterView(CreateView):
 class CustomPasswordResetView(PasswordResetView):
     """
     Override PasswordResetView to block reset requests from unauthorized devices.
+    Also disabled entirely when ALLOW_EMAIL_REGISTRATION is False (Google-only prod).
 
     SECURITY POLICY:
       - If the email belongs to a user who has a registered device (device_uuid set),
@@ -57,44 +76,58 @@ class CustomPasswordResetView(PasswordResetView):
       - Only the original registered device/browser can request a password reset.
     """
 
-    def form_valid(self, form):
+    email_template_name = "registration/password_reset_email.txt"
+    html_email_template_name = "registration/password_reset_email.html"
+    subject_template_name = "registration/password_reset_subject.txt"
+    success_url = reverse_lazy("password_reset_done")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not getattr(settings, "ALLOW_EMAIL_REGISTRATION", True):
+            raise Http404
+        return super().dispatch(request, *args, **kwargs)
+
+    def _device_allows_password_reset(self, user):
+        """Return True if this user may request a reset from the current browser."""
         from middleware.single_device import _unsign
 
-        email = form.cleaned_data.get("email", "").strip().lower()
-        try:
-            user = User.objects.get(email__iexact=email)
-        except User.DoesNotExist:
-            # Let Django handle non-existent emails (silently ignores them)
-            return super().form_valid(form)
+        if not user.device_uuid or user.is_staff:
+            return True
 
-        # If the user has no device_uuid yet, they haven't logged in from any
-        # device, so no restriction applies.
-        if not user.device_uuid:
-            return super().form_valid(form)
-
-        # Staff/superusers can reset from any device
-        if user.is_staff:
-            return super().form_valid(form)
-
-        # Check the device cookie in the current browser
         base_cookie_name = getattr(settings, "DEVICE_COOKIE_NAME", "device_token")
         cookie_name = f"{base_cookie_name}_{user.pk}"
         signed_token = self.request.COOKIES.get(cookie_name)
         token_value = _unsign(signed_token) if signed_token else None
-        db_uuid = str(user.device_uuid)
+        return token_value == str(user.device_uuid)
 
-        if token_value != db_uuid:
-            # Wrong device — block the reset and show a clear error
+    def form_valid(self, form):
+        from django.shortcuts import redirect
+        from django.urls import reverse
+
+        email = form.cleaned_data.get("email", "").strip().lower()
+        users = User.objects.filter(email__iexact=email)
+
+        if not users.exists():
+            return super().form_valid(form)
+
+        if users.count() == 1:
+            user = users.first()
+            if not self._device_allows_password_reset(user):
+                messages.error(
+                    self.request,
+                    "🔒 איפוס סיסמה אפשרי רק מהמכשיר המקורי שבו נרשמת. "
+                    "השתמש במחשב/דפדפן המקורי שלך כדי לאפס את הסיסמה."
+                )
+                return redirect(reverse("accounts:password_reset"))
+
+        try:
+            return super().form_valid(form)
+        except Exception:
+            logger.exception("Password reset email failed for %s", email)
             messages.error(
                 self.request,
-                "🔒 איפוס סיסמה אפשרי רק מהמכשיר המקורי שבו נרשמת. "
-                "השתמש במחשב/דפדפן המקורי שלך כדי לאפס את הסיסמה."
+                "We could not send the reset email. Please try again later or contact support.",
             )
-            from django.shortcuts import redirect
-            from django.urls import reverse
             return redirect(reverse("accounts:password_reset"))
-
-        return super().form_valid(form)
 
 
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
@@ -106,10 +139,8 @@ class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     """
 
     def form_valid(self, form):
-        # Let Django save the new password first
         response = super().form_valid(form)
 
-        # Now clear the device lock so the user can re-bind their device
         user = self.user  # PasswordResetConfirmView sets self.user
         if user and not user.is_staff:
             from accounts.signals import _clear_device_uuid_for_user

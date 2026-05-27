@@ -20,7 +20,11 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
 
-from .models import Category, Subcategory, Video, Purchase, CategoryAccess, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer
+from .models import (
+    Category, Subcategory, Video, Purchase, CategoryAccess,
+    SiteConfiguration, FAQ, VideoQuestion, VideoAnswer,
+    FreeAccessCampaign, FreeAccessSlot,
+)
 
 @admin.register(Subcategory)
 class SubcategoryAdmin(ModelAdmin):
@@ -240,3 +244,167 @@ class VideoAnswerAdmin(ModelAdmin):
     list_display = ("author", "question", "body", "created_at")
     search_fields = ("body", "author__username")
 
+
+# ── Free Access Campaign ────────────────────────────────────────────────
+
+class FreeAccessSlotInline(StackedInline):
+    """
+    Shows all slot holders directly inside the Campaign detail page.
+    """
+    model = FreeAccessSlot
+    extra = 0
+    readonly_fields = ('user', 'granted_at')
+    fields = ('user', 'granted_at', 'counts_toward_limit', 'note')
+    can_delete = False
+    verbose_name = "Slot Holder"
+    verbose_name_plural = "Slot Holders"
+
+
+@admin.register(FreeAccessCampaign)
+class FreeAccessCampaignAdmin(ModelAdmin):
+    """
+    Admin for the Free Access Campaign.
+
+    Key features:
+      - filter_horizontal for included_categories (easy checkbox picker)
+      - Computed slot progress shown in list_display
+      - Inline list of all slot holders
+    """
+    list_display = (
+        '__str__',
+        'is_active',
+        'slot_limit',
+        'slots_used_display',
+        'slots_remaining_display',
+        'access_duration_days',
+        'created_at',
+    )
+    list_filter = ('is_active',)
+    filter_horizontal = ('included_categories',)
+    inlines = [FreeAccessSlotInline]
+    readonly_fields = ('created_at', 'slots_used_display', 'slots_remaining_display')
+    save_on_top = True
+
+    fieldsets = (
+        ("Campaign Status", {
+            "fields": ('is_active', 'slot_limit', 'slots_used_display', 'slots_remaining_display'),
+            "description": "Enable the campaign to start granting free slots. "
+                           "Disable to immediately revoke all free access granted by this campaign.",
+        }),
+        ("Access Settings", {
+            "fields": ('included_categories', 'access_duration_days'),
+            "description": "Select which categories are included. "
+                           "Set duration in days (blank = never expires).",
+        }),
+        ("Meta", {
+            "fields": ('created_at',),
+            "classes": ('collapse',),
+        }),
+    )
+
+    @admin.display(description="Slots Used")
+    def slots_used_display(self, obj):
+        used = obj.slots_used
+        limit = obj.slot_limit
+        pct = int((used / limit) * 100) if limit > 0 else 0
+        color = "text-emerald-600" if pct < 80 else ("text-amber-500" if pct < 100 else "text-red-500")
+        return format_html(
+            '<span class="font-semibold {}">{}  /  {}</span> <span class="text-gray-400 text-xs">({}%)</span>',
+            color, used, limit, pct
+        )
+
+    @admin.display(description="Slots Remaining")
+    def slots_remaining_display(self, obj):
+        remaining = obj.slots_remaining
+        color = "text-emerald-600" if remaining > 0 else "text-red-500"
+        label = str(remaining) if remaining > 0 else "FULL"
+        return format_html('<span class="font-bold {}">{}</span>', color, label)
+
+
+@admin.action(description="🔓 Grant free access (counts toward limit)")
+def grant_free_access_action(modeladmin, request, queryset):
+    """
+    Admin action on the FreeAccessSlot list.
+    Manually grants free access to selected users via the active campaign,
+    consuming a slot from the limit.
+    """
+    from .models import FreeAccessCampaign
+    from .free_access import manually_grant_free_access
+
+    campaign = FreeAccessCampaign.objects.filter(is_active=True).first()
+    if not campaign:
+        modeladmin.message_user(request, "⚠️ No active campaign found. Please activate a campaign first.", level='warning')
+        return
+
+    granted, skipped = 0, 0
+    for slot in queryset:
+        success = manually_grant_free_access(
+            slot.user, campaign, counts_toward_limit=True,
+            note="Manually granted via Admin action"
+        )
+        if success:
+            granted += 1
+        else:
+            skipped += 1
+
+    if granted:
+        modeladmin.message_user(request, f"✅ Granted free access to {granted} user(s).")
+    if skipped:
+        modeladmin.message_user(request, f"⚠️ Skipped {skipped} user(s) (already have a slot or campaign is full).", level='warning')
+
+
+@admin.action(description="🎁 Grant free access (does NOT count toward limit)")
+def grant_free_access_no_count_action(modeladmin, request, queryset):
+    """
+    Same as above but grants without consuming a slot — useful for admins,
+    testers, or VIP users.
+    """
+    from .models import FreeAccessCampaign
+    from .free_access import manually_grant_free_access
+
+    campaign = FreeAccessCampaign.objects.filter(is_active=True).first()
+    if not campaign:
+        modeladmin.message_user(request, "⚠️ No active campaign found.", level='warning')
+        return
+
+    granted, skipped = 0, 0
+    for slot in queryset:
+        success = manually_grant_free_access(
+            slot.user, campaign, counts_toward_limit=False,
+            note="Manually granted (no-count) via Admin action"
+        )
+        if success:
+            granted += 1
+        else:
+            skipped += 1
+
+    if granted:
+        modeladmin.message_user(request, f"✅ Granted free access (no-count) to {granted} user(s).")
+    if skipped:
+        modeladmin.message_user(request, f"⚠️ Skipped {skipped} user(s).", level='warning')
+
+
+@admin.register(FreeAccessSlot)
+class FreeAccessSlotAdmin(ModelAdmin):
+    """
+    Admin for individual free access slot records.
+
+    Key features:
+      - Toggle 'counts_toward_limit' directly in the list view.
+      - Search by username.
+      - Filter by campaign and counting status.
+      - Manual-grant actions.
+    """
+    list_display = (
+        'user',
+        'campaign',
+        'granted_at',
+        'counts_toward_limit',
+        'note',
+    )
+    list_filter = ('campaign', 'counts_toward_limit')
+    search_fields = ('user__username', 'user__email')
+    list_editable = ('counts_toward_limit',)
+    readonly_fields = ('granted_at',)
+    raw_id_fields = ('user',)
+    actions = [grant_free_access_action, grant_free_access_no_count_action]
