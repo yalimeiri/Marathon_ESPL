@@ -75,7 +75,8 @@ def _clear_device_uuid_for_user(user):
 def on_google_signup(sender, request, user, sociallogin=None, **kwargs):
     """
     Fires when a brand-new user completes registration via Google OAuth.
-    Sends a welcome email identical to the one RegisterView sends.
+    Sends a welcome email identical to the one RegisterView sends,
+    then grants a free campaign slot if one is available.
     """
     # Only send for social signups; plain allauth email signups pass sociallogin=None.
     if sociallogin is None or not user.email:
@@ -98,6 +99,13 @@ def on_google_signup(sender, request, user, sociallogin=None, **kwargs):
         )
     except Exception:
         pass
+
+    # Grant free campaign access if available (same as regular registration)
+    try:
+        from courses.free_access import try_grant_free_access
+        try_grant_free_access(user)
+    except Exception:
+        logger.exception("Failed to grant free access to Google signup user '%s'.", user.username)
 
 
 # Connect to allauth's user_signed_up signal (fires only for brand-new registrations,

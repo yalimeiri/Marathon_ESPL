@@ -113,10 +113,10 @@ class FreeAccessSlot(models.Model):
       - Add notes (e.g. "manually added", "test user").
     """
 
-    user = models.OneToOneField(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='free_access_slot',
+        related_name='free_access_slots',
         verbose_name="User"
     )
     campaign = models.ForeignKey(
@@ -141,6 +141,7 @@ class FreeAccessSlot(models.Model):
         verbose_name = "Free Access Slot"
         verbose_name_plural = "Free Access Slots"
         ordering = ['-granted_at']
+        unique_together = ('user', 'campaign')
 
     def __str__(self):
         return f"{self.user.username} → {self.campaign}"
@@ -350,76 +351,56 @@ class Video(models.Model):
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
+from django.db.models import Exists, OuterRef
+
+from .access import recalculate_user_access
 
 
 @receiver(post_save, sender=FreeAccessCampaign)
 def on_campaign_save(sender, instance, **kwargs):
     """
-    When a campaign is deactivated (is_active flips to False), immediately
-    revoke PURCHASED-level CategoryAccess for every user who received a free
-    slot through this campaign, resetting them to VISITING.
+    When a campaign is deactivated (is_active flips to False), revoke
+    PURCHASED-level CategoryAccess for slot holders — UNLESS the user
+    independently has an approved Purchase for that category.
 
-    If the campaign is activated again, existing slot holders are NOT
-    automatically re-granted (admin must re-enable manually or the user
-    must register a new slot).
+    Uses a bulk SQL query with a subquery exclusion for performance.
     """
     if not instance.is_active:
         slot_user_ids = instance.slots.values_list('user_id', flat=True)
         included_category_ids = instance.included_categories.values_list('id', flat=True)
-        # Only revoke accesses that are still at PURCHASED level
+
+        # Subquery: does this user have an approved Purchase for this category?
+        has_approved_purchase = Purchase.objects.filter(
+            user_id=OuterRef('user_id'),
+            category_id=OuterRef('category_id'),
+            status='APPROVED',
+        )
+
+        # Bulk revoke, but protect users who independently paid
         CategoryAccess.objects.filter(
             user_id__in=slot_user_ids,
             category_id__in=included_category_ids,
             access_level=AccessTier.PURCHASED,
+        ).exclude(
+            Exists(has_approved_purchase)
         ).update(access_level=AccessTier.VISITING, expires_at=None)
-from datetime import timedelta
+
 
 @receiver(post_save, sender=Purchase)
-def sync_purchase_to_access(sender, instance, created, **kwargs):
+def sync_purchase_to_access(sender, instance, **kwargs):
     """
-    Ensure CategoryAccess stays mirrored to the Purchase status.
-    This handles changes made manually via Django Admin.
+    When a Purchase is created or updated, recalculate the user's access
+    using the unified calculator.
     """
-    access, _ = CategoryAccess.objects.get_or_create(
-        user=instance.user,
-        category=instance.category
-    )
-    
-    # Check highest ranking purchase status for this course
-    purchases = Purchase.objects.filter(user=instance.user, category=instance.category)
-    
-    if purchases.filter(status='APPROVED').exists():
-        access.access_level = AccessTier.PURCHASED
-        if not access.expires_at:
-            access.expires_at = timezone.now() + timedelta(days=120)
-    elif purchases.filter(status='PENDING').exists():
-        access.access_level = AccessTier.PENDING
-        access.expires_at = None
-    else:
-        access.access_level = AccessTier.VISITING
-        access.expires_at = None
-        
-    access.save()
+    recalculate_user_access(instance.user, instance.category)
 
 
 @receiver(post_delete, sender=Purchase)
 def cleanup_access_on_purchase_delete(sender, instance, **kwargs):
     """
-    If a purchase is deleted (e.g. via Admin), recalculate their access.
+    When a Purchase is deleted (e.g. via Admin), recalculate access.
     """
-    purchases = Purchase.objects.filter(user=instance.user, category=instance.category)
-    
-    access = CategoryAccess.objects.filter(user=instance.user, category=instance.category).first()
-    if access:
-        if purchases.filter(status='APPROVED').exists():
-            access.access_level = AccessTier.PURCHASED
-        elif purchases.filter(status='PENDING').exists():
-            access.access_level = AccessTier.PENDING
-            access.expires_at = None
-        else:
-            access.access_level = AccessTier.VISITING
-            access.expires_at = None
-        access.save()
+    recalculate_user_access(instance.user, instance.category)
 
 
 class FAQ(models.Model):

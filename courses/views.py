@@ -210,19 +210,13 @@ class PaymentView(LoginRequiredMixin, DetailView):
             category=category,
             defaults={'phone_number': phone_number, 'payer_name': payer_name, 'status': 'PENDING'}
         )
-        
-        # Sync to CategoryAccess
-        access, access_created = CategoryAccess.objects.get_or_create(
-            user=request.user,
-            category=category,
-            defaults={'access_level': AccessTier.PENDING}
-        )
-        
+
         if not created:
             if purchase.status == 'PENDING':
+                # Update contact info on existing pending purchase
                 purchase.phone_number = phone_number
                 purchase.payer_name = payer_name
-                purchase.save()
+                purchase.save()  # Signal → recalculate_user_access
             elif purchase.status == 'APPROVED':
                 # Check actual effective access
                 eff_level = get_effective_access_level(request.user, category)
@@ -232,9 +226,7 @@ class PaymentView(LoginRequiredMixin, DetailView):
                 else:
                     # Access expired or was revoked. Re-submit!
                     purchase.status = 'PENDING'
-                    purchase.save()
-                    access.access_level = AccessTier.PENDING
-                    access.save()
+                    purchase.save()  # Signal → recalculate_user_access
 
         # Send Telegram Message
         config = SiteConfiguration.get_solo()
@@ -316,30 +308,17 @@ def telegram_webhook(request):
                         requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Failed."})
                         return JsonResponse({"status": "ok"})
 
-                    category_access = CategoryAccess.objects.filter(user=purchase.user, category=purchase.category).first()
-                    if not category_access:
-                        requests.post(f"https://api.telegram.org/bot{configured_token}/sendMessage", json={"chat_id": chat_id, "text": f"Error: No CategoryAccess found for Purchase #{purchase_id_str} (User: {purchase.user})."})
-                        requests.post(f"https://api.telegram.org/bot{configured_token}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": "Failed."})
-                        return JsonResponse({"status": "ok"})
 
                     action_text = ""
 
                     if action == 'approve':
                         purchase.status = 'APPROVED'
-                        purchase.save()
-
-                        category_access.access_level = AccessTier.PURCHASED
-                        category_access.expires_at = timezone.now() + timedelta(days=120)  # 4 months
-                        category_access.save()
+                        purchase.save()  # Signal → recalculate_user_access
                         action_text = "✅ Approved "
 
                     elif action == 'reject':
                         purchase.status = 'REJECTED'
-                        purchase.save()
-
-                        category_access.access_level = AccessTier.VISITING
-                        category_access.expires_at = None
-                        category_access.save()
+                        purchase.save()  # Signal → recalculate_user_access
                         action_text = "❌ Rejected "
 
                     # Answer the callback query to stop the loading animation on the Telegram button

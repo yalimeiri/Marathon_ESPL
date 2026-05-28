@@ -17,8 +17,6 @@ Public API
 
 import logging
 from django.db import transaction
-from django.utils import timezone
-from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +34,7 @@ def try_grant_free_access(user):
 
     Returns True if a slot was granted, False otherwise.
     """
-    from .models import FreeAccessCampaign, FreeAccessSlot, CategoryAccess, AccessTier
+    from .models import FreeAccessCampaign, FreeAccessSlot
 
     campaign = FreeAccessCampaign.objects.filter(is_active=True).first()
     if not campaign:
@@ -47,10 +45,19 @@ def try_grant_free_access(user):
     if campaign.is_full:
         return False
 
+    # Duplicate-slot guard: don't grant if user already has a slot for this campaign
+    if FreeAccessSlot.objects.filter(user=user, campaign=campaign).exists():
+        logger.info("User '%s' already has a slot for campaign #%s.", user.username, campaign.pk)
+        return False
+
     with transaction.atomic():
         # Lock the campaign row to prevent concurrent over-grants
         campaign = FreeAccessCampaign.objects.select_for_update().filter(is_active=True).first()
         if not campaign or campaign.is_full:
+            return False
+
+        # Re-check inside the lock
+        if FreeAccessSlot.objects.filter(user=user, campaign=campaign).exists():
             return False
 
         return _do_grant(user, campaign, counts_toward_limit=True)
@@ -92,35 +99,26 @@ def manually_grant_free_access(user, campaign, counts_toward_limit=True, note=""
 
 def _do_grant(user, campaign, counts_toward_limit=True, note=""):
     """
-    Internal: writes CategoryAccess rows + FreeAccessSlot. Must be called
-    inside an atomic block.
+    Internal: creates a FreeAccessSlot, then recalculates access via the
+    unified calculator. Must be called inside an atomic block.
+
+    Order matters: the slot record is created FIRST so that
+    recalculate_user_access() can see it when it runs.
     """
-    from .models import FreeAccessSlot, CategoryAccess, AccessTier
+    from .models import FreeAccessSlot
+    from .access import recalculate_user_access
 
-    # Calculate expiry date
-    expires_at = None
-    if campaign.access_duration_days:
-        expires_at = timezone.now() + timedelta(days=campaign.access_duration_days)
-
-    # Grant PURCHASED access to each included category
-    for category in campaign.included_categories.all():
-        access, _ = CategoryAccess.objects.get_or_create(
-            user=user,
-            category=category,
-        )
-        # Only upgrade, never downgrade an existing paid access
-        if access.access_level < AccessTier.PURCHASED:
-            access.access_level = AccessTier.PURCHASED
-            access.expires_at = expires_at
-            access.save(update_fields=["access_level", "expires_at"])
-
-    # Record the slot
+    # 1. Record the slot first
     FreeAccessSlot.objects.create(
         user=user,
         campaign=campaign,
         counts_toward_limit=counts_toward_limit,
         note=note,
     )
+
+    # 2. Recalculate access for each included category
+    for category in campaign.included_categories.all():
+        recalculate_user_access(user, category)
 
     logger.info(
         "Free access slot granted to '%s' for campaign #%s (counts=%s).",
