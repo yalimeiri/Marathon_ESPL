@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}חומר עזר — {{ category.name }} — THEFLYINGSQUIREL{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* ── Page header ── */
+    .page-header {
+        margin-bottom: 28px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--indigo);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 20px;
+        transition: gap .15s;
+    }
+
+    .back-link:hover { gap: 10px; }
+
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: -0.3px;
+        margin-bottom: 6px;
+    }
+
+    .page-header p { color: var(--text-muted); }
+
+    /* ── Section tabs ── */
+    .section-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 32px;
+        flex-wrap: wrap;
+    }
+
+    .section-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-muted);
+        transition: border-color .2s, color .2s, background .2s;
+    }
+
+    .section-tab:hover {
+        border-color: var(--indigo);
+        color: var(--indigo);
+    }
+
+    .section-tab.active {
+        background: var(--indigo);
+        border-color: var(--indigo);
+        color: #fff;
+    }
+
+    /* ── Materials grid ── */
+    .materials-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    /* ── Link card ── */
+    .material-link-card {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px 24px;
+        text-decoration: none;
+        transition: border-color .2s, transform .15s, box-shadow .2s;
+    }
+
+    .material-link-card:hover {
+        border-color: var(--indigo);
+        transform: translateX(4px);
+        box-shadow: 0 4px 20px rgba(99,102,241,.1);
+    }
+
+    .material-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: rgba(99,102,241,.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        flex-shrink: 0;
+        transition: background .2s;
+    }
+
+    .material-link-card:hover .material-icon {
+        background: var(--indigo);
+    }
+
+    .material-info { flex: 1; }
+
+    .material-title {
+        color: var(--text);
+        font-weight: 700;
+        font-size: 1rem;
+        margin-bottom: 3px;
+    }
+
+    .material-desc {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        line-height: 1.45;
+    }
+
+    .material-arrow {
+        color: var(--text-muted);
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        transition: transform .2s, color .2s;
+    }
+
+    .material-link-card:hover .material-arrow {
+        transform: translateX(4px);
+        color: var(--indigo);
+    }
+
+    /* ── Slides embed card ── */
+    .material-slides-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        transition: border-color .2s;
+    }
+
+    .material-slides-card:hover { border-color: var(--indigo); }
+
+    .slides-header {
+        padding: 18px 24px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .slides-header .material-icon { flex-shrink: 0; }
+
+    .slides-header .material-title { margin-bottom: 2px; }
+
+    .slides-open-link {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: border-color .2s, color .2s;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .slides-open-link:hover {
+        border-color: var(--indigo);
+        color: var(--indigo);
+    }
+
+    .slides-embed-wrapper {
+        position: relative;
+        width: 100%;
+        /* 16:9 ratio */
+        padding-top: 56.25%;
+        background: #0f172a;
+    }
+
+    .slides-embed-wrapper iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
+    /* ── Locked / empty states ── */
+    .locked-state, .empty-state {
+        text-align: center;
+        padding: 70px 0;
+        color: var(--text-muted);
+    }
+
+    .state-icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+        display: block;
+    }
+
+    .locked-state h2 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+
+    .locked-state p { margin-bottom: 24px; }
+
+    .btn-purchase {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 28px;
+        background: var(--indigo);
+        color: #fff;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: background .2s;
+    }
+
+    .btn-purchase:hover { background: #4338ca; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="{% url 'courses:video-list' category.pk %}" class="back-link">← {{ category.name }}</a>
+    <h1>📚 חומר עזר</h1>
+    <p>לינקים, מצגות וחומרי לימוד לקראת הבוחן.</p>
+</div>
+
+{# ── Section tabs ── #}
+<nav class="section-tabs">
+    <a href="{% url 'courses:video-list' category.pk %}" class="section-tab">🎬 שיעורים</a>
+    <a href="{% url 'courses:exam-qa' category.pk %}" class="section-tab">📝 שאלות בוחן</a>
+    <a href="{% url 'courses:resources' category.pk %}" class="section-tab active">📚 חומר עזר</a>
+</nav>
+
+{% if not has_access %}
+{# ── User doesn't have purchased access ── #}
+<div class="locked-state">
+    <span class="state-icon">🔒</span>
+    <h2>תוכן זה זמין לרוכשי הקורס</h2>
+    <p>רכוש את הקורס כדי לגשת לחומרי העזר והמצגות.</p>
+    <a href="{% url 'courses:payment' category.pk %}" class="btn-purchase">💳 לרכישת הקורס</a>
+</div>
+
+{% elif not materials %}
+{# ── Access OK but no content yet ── #}
+<div class="empty-state">
+    <span class="state-icon">📭</span>
+    <p>עדיין אין חומר עזר בקטגוריה זו. בקר שוב בקרוב!</p>
+</div>
+
+{% else %}
+<div class="materials-grid">
+    {% for material in materials %}
+
+        {% if material.material_type == "link" %}
+        {# ── External link card ── #}
+        <a href="{{ material.url }}" target="_blank" rel="noopener noreferrer" class="material-link-card">
+            <div class="material-icon">🔗</div>
+            <div class="material-info">
+                <div class="material-title">{{ material.title }}</div>
+                {% if material.description %}
+                <div class="material-desc">{{ material.description }}</div>
+                {% endif %}
+            </div>
+            <span class="material-arrow">→</span>
+        </a>
+
+        {% elif material.material_type == "slides" %}
+        {# ── Google Slides embed card ── #}
+        <div class="material-slides-card">
+            <div class="slides-header">
+                <div class="material-icon">🖥️</div>
+                <div class="material-info">
+                    <div class="material-title">{{ material.title }}</div>
+                    {% if material.description %}
+                    <div class="material-desc">{{ material.description }}</div>
+                    {% endif %}
+                </div>
+                {% if material.url %}
+                <a href="{{ material.url }}" target="_blank" rel="noopener noreferrer" class="slides-open-link">
+                    ↗ פתח בחלון חדש
+                </a>
+                {% endif %}
+            </div>
+            {% if material.embed_url %}
+            <div class="slides-embed-wrapper">
+                <iframe
+                    src="{{ material.embed_url }}"
+                    allowfullscreen="true"
+                    mozallowfullscreen="true"
+                    webkitallowfullscreen="true"
+                    loading="lazy"
+                    title="{{ material.title }}"
+                ></iframe>
+            </div>
+            {% else %}
+            <div style="padding: 32px 24px; color: var(--text-muted); text-align: center;">
+                ⚠️ Embed URL לא הוגדר למצגת זו.
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

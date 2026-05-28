@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% block title %}שאלות בוחן — {{ category.name }} — THEFLYINGSQUIREL{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* ── Page header ── */
+    .page-header {
+        margin-bottom: 28px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--indigo);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 20px;
+        transition: gap .15s;
+    }
+
+    .back-link:hover { gap: 10px; }
+
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: -0.3px;
+        margin-bottom: 6px;
+    }
+
+    .page-header p { color: var(--text-muted); }
+
+    /* ── Section tabs ── */
+    .section-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 32px;
+        flex-wrap: wrap;
+    }
+
+    .section-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-muted);
+        transition: border-color .2s, color .2s, background .2s;
+    }
+
+    .section-tab:hover {
+        border-color: var(--indigo);
+        color: var(--indigo);
+    }
+
+    .section-tab.active {
+        background: var(--indigo);
+        border-color: var(--indigo);
+        color: #fff;
+    }
+
+    /* ── Accordion Q&A ── */
+    .qa-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        max-width: 860px;
+    }
+
+    .qa-item {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        transition: border-color .2s;
+    }
+
+    .qa-item:hover { border-color: var(--indigo); }
+
+    .qa-question {
+        padding: 20px 24px;
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: var(--text);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        user-select: none;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    .qa-question-text { flex: 1; }
+
+    .qa-icon {
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(99,102,241,.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--indigo);
+        font-size: 1.2rem;
+        line-height: 1;
+        transition: transform .3s, background .2s;
+        margin-top: 2px;
+    }
+
+    .qa-item.open .qa-icon {
+        transform: rotate(45deg);
+        background: var(--indigo);
+        color: #fff;
+    }
+
+    .qa-body {
+        display: none;
+        padding: 0 24px 24px;
+    }
+
+    .qa-item.open .qa-body { display: block; }
+
+    .qa-answer {
+        color: var(--text);
+        font-size: 0.97rem;
+        line-height: 1.7;
+        padding: 16px 18px;
+        background: rgba(99,102,241,.07);
+        border-radius: 8px;
+        border-left: 3px solid var(--indigo);
+        margin-bottom: 12px;
+    }
+
+    .qa-explanation {
+        color: var(--text-muted);
+        font-size: 0.88rem;
+        line-height: 1.65;
+        padding: 12px 16px;
+        background: var(--surface2);
+        border-radius: 8px;
+    }
+
+    .qa-explanation-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+    }
+
+    .qa-num-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--surface2);
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        flex-shrink: 0;
+        margin-right: 10px;
+        margin-top: 3px;
+    }
+
+    /* ── Locked / empty states ── */
+    .locked-state, .empty-state {
+        text-align: center;
+        padding: 70px 0;
+        color: var(--text-muted);
+    }
+
+    .state-icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+        display: block;
+    }
+
+    .locked-state h2 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+
+    .locked-state p { margin-bottom: 24px; }
+
+    .btn-purchase {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 28px;
+        background: var(--indigo);
+        color: #fff;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: background .2s;
+    }
+
+    .btn-purchase:hover { background: #4338ca; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="{% url 'courses:video-list' category.pk %}" class="back-link">← {{ category.name }}</a>
+    <h1>📝 שאלות בוחן</h1>
+    <p>שאלות ממבחנים קודמים עם תשובות והסברים מפורטים.</p>
+</div>
+
+{# ── Section tabs ── #}
+<nav class="section-tabs">
+    <a href="{% url 'courses:video-list' category.pk %}" class="section-tab">🎬 שיעורים</a>
+    <a href="{% url 'courses:exam-qa' category.pk %}" class="section-tab active">📝 שאלות בוחן</a>
+    <a href="{% url 'courses:resources' category.pk %}" class="section-tab">📚 חומר עזר</a>
+</nav>
+
+{% if not has_access %}
+{# ── User doesn't have purchased access ── #}
+<div class="locked-state">
+    <span class="state-icon">🔒</span>
+    <h2>תוכן זה זמין לרוכשי הקורס</h2>
+    <p>רכוש את הקורס כדי לגשת לשאלות ותשובות ממבחנים קודמים.</p>
+    <a href="{% url 'courses:payment' category.pk %}" class="btn-purchase">💳 לרכישת הקורס</a>
+</div>
+
+{% elif not questions %}
+{# ── Access OK but no content yet ── #}
+<div class="empty-state">
+    <span class="state-icon">📭</span>
+    <p>עדיין אין שאלות בוחן בקטגוריה זו. בקר שוב בקרוב!</p>
+</div>
+
+{% else %}
+{# ── Q&A Accordion ── #}
+<div class="qa-list">
+    {% for q in questions %}
+    <div class="qa-item" id="qa-{{ q.pk }}">
+        <div class="qa-question">
+            <span class="qa-num-badge">{{ forloop.counter }}</span>
+            <span class="qa-question-text">{{ q.question }}</span>
+            <span class="qa-icon">+</span>
+        </div>
+        <div class="qa-body">
+            <div class="qa-answer">{{ q.answer|linebreaks }}</div>
+            {% if q.explanation %}
+            <div class="qa-explanation">
+                <div class="qa-explanation-label">💡 הסבר</div>
+                {{ q.explanation|linebreaks }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".qa-question").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var item = btn.closest(".qa-item");
+                var isOpen = item.classList.contains("open");
+
+                // Close all others
+                document.querySelectorAll(".qa-item.open").forEach(function (el) {
+                    el.classList.remove("open");
+                });
+
+                // Toggle clicked
+                if (!isOpen) {
+                    item.classList.add("open");
+                }
+            });
+        });
+
+        // Auto-open if hash points to a question
+        if (window.location.hash) {
+            var target = document.querySelector(window.location.hash);
+            if (target && target.classList.contains("qa-item")) {
+                target.classList.add("open");
+                target.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -505,3 +505,100 @@ class VideoAnswer(models.Model):
     def __str__(self):
         return f"{self.author.username} → {self.question.body[:40]}"
 
+
+class ExamQuestion(models.Model):
+    """
+    A past exam question with a model answer and an optional deeper explanation.
+    Displayed as an accordion on the Exam Q&A page.
+    """
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="exam_questions",
+        verbose_name="Category",
+    )
+    question = models.TextField(verbose_name="Question")
+    answer = models.TextField(verbose_name="Answer")
+    explanation = models.TextField(
+        blank=True,
+        verbose_name="Explanation",
+        help_text="Optional deeper explanation shown below the answer.",
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Order",
+        help_text="Display order (lower = first).",
+    )
+    is_published = models.BooleanField(default=True, verbose_name="Published")
+    minimum_access_level = models.IntegerField(
+        choices=AccessTier.choices,
+        default=AccessTier.PURCHASED,
+        verbose_name="Minimum Access Level",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Exam Question"
+        verbose_name_plural = "Exam Questions"
+        ordering = ["order"]
+
+    def __str__(self):
+        return f"Q{self.order}: {self.question[:80]}"
+
+
+class ReferenceMaterial(models.Model):
+    """
+    A reference item for exam prep — either an external link (PDF, doc, etc.)
+    or an embedded Google Slides presentation.
+    """
+    TYPE_LINK = "link"
+    TYPE_SLIDES = "slides"
+    MATERIAL_TYPE_CHOICES = [
+        (TYPE_LINK, "External Link"),
+        (TYPE_SLIDES, "Google Slides Embed"),
+    ]
+
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="resources",
+        verbose_name="Category",
+    )
+    title = models.CharField(max_length=300, verbose_name="Title")
+    description = models.TextField(blank=True, verbose_name="Description")
+    material_type = models.CharField(
+        max_length=20,
+        choices=MATERIAL_TYPE_CHOICES,
+        default=TYPE_LINK,
+        verbose_name="Type",
+    )
+    url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="URL",
+        help_text="External link (for links) or 'open in new tab' URL (for slides).",
+    )
+    embed_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="Embed URL",
+        help_text="Google Slides: File → Share → Publish to web → Embed → copy src URL.",
+    )
+    order = models.PositiveIntegerField(default=0, verbose_name="Order")
+    is_published = models.BooleanField(default=True, verbose_name="Published")
+    minimum_access_level = models.IntegerField(
+        choices=AccessTier.choices,
+        default=AccessTier.PURCHASED,
+        verbose_name="Minimum Access Level",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Reference Material"
+        verbose_name_plural = "Reference Materials"
+        ordering = ["order", "title"]
+
+    def __str__(self):
+        return self.title
+

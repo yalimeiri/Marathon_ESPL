@@ -28,7 +28,7 @@ import requests
 import json
 from django.utils import timezone
 
-from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer, ExamQuestion, ReferenceMaterial
 
 
 def get_effective_access_level(user, category):
@@ -86,10 +86,11 @@ class VideoListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["category"] = self.category
-        
+
         user_level = get_effective_access_level(self.request.user, self.category)
         ctx["user_access_level"] = user_level
-        
+        ctx["has_access"] = user_level >= AccessTier.PURCHASED
+
         # Attach explicit boolean states to nested videos
         for subcategory in ctx["subcategories"]:
             for video in subcategory.videos.all():
@@ -474,4 +475,58 @@ class FAQListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return FAQ.objects.filter(is_published=True).order_by('order', '-created_at')
+
+
+class ExamQuestionListView(LoginRequiredMixin, ListView):
+    """
+    GET /courses/category/<pk>/qa/
+    Shows past exam questions for a category.
+    Respects the same CategoryAccess / AccessTier access control as videos.
+    """
+    model = ExamQuestion
+    template_name = "courses/exam_questions.html"
+    context_object_name = "questions"
+
+    def get_queryset(self):
+        self.category = get_object_or_404(Category, pk=self.kwargs["pk"])
+        self.access_level = get_effective_access_level(self.request.user, self.category)
+        return ExamQuestion.objects.filter(
+            category=self.category,
+            is_published=True,
+            minimum_access_level__lte=self.access_level,
+        ).order_by("order")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["category"] = self.category
+        ctx["access_level"] = self.access_level
+        ctx["has_access"] = self.access_level >= AccessTier.PURCHASED
+        return ctx
+
+
+class ResourceListView(LoginRequiredMixin, ListView):
+    """
+    GET /courses/category/<pk>/resources/
+    Shows reference materials (links + Google Slides embeds) for a category.
+    Respects the same CategoryAccess / AccessTier access control as videos.
+    """
+    model = ReferenceMaterial
+    template_name = "courses/resources.html"
+    context_object_name = "materials"
+
+    def get_queryset(self):
+        self.category = get_object_or_404(Category, pk=self.kwargs["pk"])
+        self.access_level = get_effective_access_level(self.request.user, self.category)
+        return ReferenceMaterial.objects.filter(
+            category=self.category,
+            is_published=True,
+            minimum_access_level__lte=self.access_level,
+        ).order_by("order")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["category"] = self.category
+        ctx["access_level"] = self.access_level
+        ctx["has_access"] = self.access_level >= AccessTier.PURCHASED
+        return ctx
 
