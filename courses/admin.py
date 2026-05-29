@@ -136,7 +136,6 @@ class SubcategoryInline(StackedInline):
 class CategoryAdmin(ModelAdmin):
     list_display = ("name", "price", "subcategories_link", "video_count", "created_at")
     search_fields = ("name",)
-    inlines = [SubcategoryInline]
     ordering_field = "order"
     save_on_top = True
 
