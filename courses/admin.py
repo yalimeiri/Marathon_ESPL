@@ -139,18 +139,6 @@ class CategoryAdmin(ModelAdmin):
     inlines = [SubcategoryInline]
     ordering_field = "order"
     save_on_top = True
-    fieldsets = (
-        (None, {
-            "fields": ("name", "description", "price"),
-        }),
-        ("Exam Q&A — Google Slides", {
-            "fields": ("exam_slides_embed_url", "exam_slides_url"),
-            "description": (
-                "Paste only the src URL from Google Slides → File → Share → Publish to web → Embed. "
-                "Do NOT paste the whole iframe tag. Shown on the Exam Q&A tab to paying users."
-            ),
-        }),
-    )
 
     @admin.display(description="Subcategories")
     def subcategories_link(self, obj):
