@@ -141,14 +141,13 @@ class CategoryAdmin(ModelAdmin):
     save_on_top = True
     fieldsets = (
         (None, {
-            "fields": ("name", "description", "price", "order"),
+            "fields": ("name", "description", "price"),
         }),
         ("Exam Q&A — Google Slides", {
             "fields": ("exam_slides_embed_url", "exam_slides_url"),
             "description": (
-                "Paste the Google Slides <strong>publish-to-web Embed src URL</strong> "
-                "(File → Share → Publish to web → Embed → copy the src only, not the &lt;iframe&gt; tag). "
-                "This presentation is shown on the Exam Q&amp;A tab to paying users."
+                "Paste only the src URL from Google Slides → File → Share → Publish to web → Embed. "
+                "Do NOT paste the whole iframe tag. Shown on the Exam Q&A tab to paying users."
             ),
         }),
     )
