@@ -24,7 +24,7 @@ from .models import (
     Category, Subcategory, Video, Purchase, CategoryAccess,
     SiteConfiguration, FAQ, VideoQuestion, VideoAnswer,
     FreeAccessCampaign, FreeAccessSlot,
-    ExamQuestion, ReferenceMaterial,
+    ReferenceMaterial,
 )
 
 @admin.register(Subcategory)
@@ -139,6 +139,19 @@ class CategoryAdmin(ModelAdmin):
     inlines = [SubcategoryInline]
     ordering_field = "order"
     save_on_top = True
+    fieldsets = (
+        (None, {
+            "fields": ("name", "description", "price", "order"),
+        }),
+        ("Exam Q&A — Google Slides", {
+            "fields": ("exam_slides_embed_url", "exam_slides_url"),
+            "description": (
+                "Paste the Google Slides <strong>publish-to-web Embed src URL</strong> "
+                "(File → Share → Publish to web → Embed → copy the src only, not the &lt;iframe&gt; tag). "
+                "This presentation is shown on the Exam Q&amp;A tab to paying users."
+            ),
+        }),
+    )
 
     @admin.display(description="Subcategories")
     def subcategories_link(self, obj):
@@ -411,43 +424,22 @@ class FreeAccessSlotAdmin(ModelAdmin):
     actions = [grant_free_access_action, grant_free_access_no_count_action]
 
 
-# ── Exam Q&A ────────────────────────────────────────────────────────────────
-
-@admin.register(ExamQuestion)
-class ExamQuestionAdmin(ModelAdmin):
-    list_display = ("short_question", "category", "order", "is_published", "minimum_access_level")
-    list_editable = ("order", "is_published")
-    list_filter = ("category", "is_published", "minimum_access_level")
-    search_fields = ("question", "answer", "explanation")
-    ordering_field = "order"
-    save_on_top = True
-
-    @admin.display(description="Question")
-    def short_question(self, obj):
-        return obj.question[:80] + ("…" if len(obj.question) > 80 else "")
-
-
-# ── Reference Materials ──────────────────────────────────────────────────────
+# ── Reference Materials (PDF / file links) ───────────────────────────────────
 
 @admin.register(ReferenceMaterial)
 class ReferenceMaterialAdmin(ModelAdmin):
-    list_display = ("title", "category", "material_type", "order", "is_published", "minimum_access_level")
+    list_display = ("title", "category", "order", "is_published", "minimum_access_level")
     list_editable = ("order", "is_published")
-    list_filter = ("category", "material_type", "is_published", "minimum_access_level")
+    list_filter = ("category", "is_published", "minimum_access_level")
     search_fields = ("title", "description")
     ordering_field = "order"
     save_on_top = True
     fieldsets = (
         ("Basic Info", {
-            "fields": ("category", "title", "description", "material_type", "order", "is_published", "minimum_access_level"),
+            "fields": ("category", "title", "description", "order", "is_published", "minimum_access_level"),
         }),
-        ("URLs", {
-            "fields": ("url", "embed_url"),
-            "description": (
-                "For External Link: fill in URL only. "
-                "For Google Slides: paste the embed src URL in Embed URL "
-                "(File → Share → Publish to web → Embed). "
-                "Optionally also add the regular URL for the 'open in new tab' button."
-            ),
+        ("File Link", {
+            "fields": ("url",),
+            "description": "Direct link to the PDF (or other file) to print/download.",
         }),
     )

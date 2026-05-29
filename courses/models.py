@@ -227,6 +227,19 @@ class Category(models.Model):
     description = models.TextField(blank=True, verbose_name="Description")
     price = models.IntegerField(default=100, verbose_name="Price (NIS)", help_text="Set the price in NIS for this course.")
     order = models.PositiveIntegerField(default=0, blank=False, null=False, verbose_name="Order", help_text="Display order (drag-and-drop in Admin).")
+    exam_slides_embed_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="Exam Q&A — Slides Embed URL",
+        help_text="Google Slides: File → Share → Publish to web → Embed → copy the src URL only "
+                  "(not the whole <iframe> tag). Shown on the Exam Q&A page to paying users.",
+    )
+    exam_slides_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="Exam Q&A — Open-in-new-tab URL",
+        help_text="Optional. A normal link to the presentation for the 'open in new tab' button.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -506,59 +519,11 @@ class VideoAnswer(models.Model):
         return f"{self.author.username} → {self.question.body[:40]}"
 
 
-class ExamQuestion(models.Model):
-    """
-    A past exam question with a model answer and an optional deeper explanation.
-    Displayed as an accordion on the Exam Q&A page.
-    """
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.CASCADE,
-        related_name="exam_questions",
-        verbose_name="Category",
-    )
-    question = models.TextField(verbose_name="Question")
-    answer = models.TextField(verbose_name="Answer")
-    explanation = models.TextField(
-        blank=True,
-        verbose_name="Explanation",
-        help_text="Optional deeper explanation shown below the answer.",
-    )
-    order = models.PositiveIntegerField(
-        default=0,
-        verbose_name="Order",
-        help_text="Display order (lower = first).",
-    )
-    is_published = models.BooleanField(default=True, verbose_name="Published")
-    minimum_access_level = models.IntegerField(
-        choices=AccessTier.choices,
-        default=AccessTier.PURCHASED,
-        verbose_name="Minimum Access Level",
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Exam Question"
-        verbose_name_plural = "Exam Questions"
-        ordering = ["order"]
-
-    def __str__(self):
-        return f"Q{self.order}: {self.question[:80]}"
-
-
 class ReferenceMaterial(models.Model):
     """
-    A reference item for exam prep — either an external link (PDF, doc, etc.)
-    or an embedded Google Slides presentation.
+    A reference item for exam prep — a link to a downloadable/printable file
+    (PDF, doc, etc.) shown on the Reference Materials page.
     """
-    TYPE_LINK = "link"
-    TYPE_SLIDES = "slides"
-    MATERIAL_TYPE_CHOICES = [
-        (TYPE_LINK, "External Link"),
-        (TYPE_SLIDES, "Google Slides Embed"),
-    ]
-
     category = models.ForeignKey(
         Category,
         on_delete=models.CASCADE,
@@ -567,23 +532,10 @@ class ReferenceMaterial(models.Model):
     )
     title = models.CharField(max_length=300, verbose_name="Title")
     description = models.TextField(blank=True, verbose_name="Description")
-    material_type = models.CharField(
-        max_length=20,
-        choices=MATERIAL_TYPE_CHOICES,
-        default=TYPE_LINK,
-        verbose_name="Type",
-    )
     url = models.URLField(
         max_length=500,
-        blank=True,
-        verbose_name="URL",
-        help_text="External link (for links) or 'open in new tab' URL (for slides).",
-    )
-    embed_url = models.URLField(
-        max_length=500,
-        blank=True,
-        verbose_name="Embed URL",
-        help_text="Google Slides: File → Share → Publish to web → Embed → copy src URL.",
+        verbose_name="File / Link URL",
+        help_text="Direct link to the PDF (or other file) to print/download.",
     )
     order = models.PositiveIntegerField(default=0, verbose_name="Order")
     is_published = models.BooleanField(default=True, verbose_name="Published")

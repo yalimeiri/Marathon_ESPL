@@ -18,7 +18,7 @@ urlpatterns = [
     path("category/<int:pk>/", views.VideoListView.as_view(), name="video-list"),
 
     # Past exam Q&A → /courses/category/<pk>/qa/
-    path("category/<int:pk>/qa/", views.ExamQuestionListView.as_view(), name="exam-qa"),
+    path("category/<int:pk>/qa/", views.ExamSlidesView.as_view(), name="exam-qa"),
 
     # Reference materials → /courses/category/<pk>/resources/
     path("category/<int:pk>/resources/", views.ResourceListView.as_view(), name="resources"),

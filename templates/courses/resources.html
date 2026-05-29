@@ -134,70 +134,8 @@
     }
 
     .material-link-card:hover .material-arrow {
-        transform: translateX(4px);
+        transform: translateY(3px);
         color: var(--indigo);
-    }
-
-    /* ── Slides embed card ── */
-    .material-slides-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        overflow: hidden;
-        transition: border-color .2s;
-    }
-
-    .material-slides-card:hover { border-color: var(--indigo); }
-
-    .slides-header {
-        padding: 18px 24px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .slides-header .material-icon { flex-shrink: 0; }
-
-    .slides-header .material-title { margin-bottom: 2px; }
-
-    .slides-open-link {
-        margin-left: auto;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 7px 14px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        color: var(--text-muted);
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-decoration: none;
-        transition: border-color .2s, color .2s;
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-
-    .slides-open-link:hover {
-        border-color: var(--indigo);
-        color: var(--indigo);
-    }
-
-    .slides-embed-wrapper {
-        position: relative;
-        width: 100%;
-        /* 16:9 ratio */
-        padding-top: 56.25%;
-        background: #0f172a;
-    }
-
-    .slides-embed-wrapper iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border: none;
     }
 
     /* ── Locked / empty states ── */
@@ -244,7 +182,7 @@
 <div class="page-header">
     <a href="{% url 'courses:video-list' category.pk %}" class="back-link">← {{ category.name }}</a>
     <h1>📚 חומר עזר</h1>
-    <p>לינקים, מצגות וחומרי לימוד לקראת הבוחן.</p>
+    <p>קבצים וחומרי לימוד להדפסה ולשימוש לקראת הבוחן.</p>
 </div>
 
 {# ── Section tabs ── #}
@@ -273,56 +211,17 @@
 {% else %}
 <div class="materials-grid">
     {% for material in materials %}
-
-        {% if material.material_type == "link" %}
-        {# ── External link card ── #}
-        <a href="{{ material.url }}" target="_blank" rel="noopener noreferrer" class="material-link-card">
-            <div class="material-icon">🔗</div>
-            <div class="material-info">
-                <div class="material-title">{{ material.title }}</div>
-                {% if material.description %}
-                <div class="material-desc">{{ material.description }}</div>
-                {% endif %}
-            </div>
-            <span class="material-arrow">→</span>
-        </a>
-
-        {% elif material.material_type == "slides" %}
-        {# ── Google Slides embed card ── #}
-        <div class="material-slides-card">
-            <div class="slides-header">
-                <div class="material-icon">🖥️</div>
-                <div class="material-info">
-                    <div class="material-title">{{ material.title }}</div>
-                    {% if material.description %}
-                    <div class="material-desc">{{ material.description }}</div>
-                    {% endif %}
-                </div>
-                {% if material.url %}
-                <a href="{{ material.url }}" target="_blank" rel="noopener noreferrer" class="slides-open-link">
-                    ↗ פתח בחלון חדש
-                </a>
-                {% endif %}
-            </div>
-            {% if material.embed_url %}
-            <div class="slides-embed-wrapper">
-                <iframe
-                    src="{{ material.embed_url }}"
-                    allowfullscreen="true"
-                    mozallowfullscreen="true"
-                    webkitallowfullscreen="true"
-                    loading="lazy"
-                    title="{{ material.title }}"
-                ></iframe>
-            </div>
-            {% else %}
-            <div style="padding: 32px 24px; color: var(--text-muted); text-align: center;">
-                ⚠️ Embed URL לא הוגדר למצגת זו.
-            </div>
+    {# ── File / PDF link card ── #}
+    <a href="{{ material.url }}" target="_blank" rel="noopener noreferrer" class="material-link-card">
+        <div class="material-icon">📄</div>
+        <div class="material-info">
+            <div class="material-title">{{ material.title }}</div>
+            {% if material.description %}
+            <div class="material-desc">{{ material.description }}</div>
             {% endif %}
         </div>
-        {% endif %}
-
+        <span class="material-arrow">↓</span>
+    </a>
     {% endfor %}
 </div>
 {% endif %}

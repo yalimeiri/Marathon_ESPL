@@ -28,7 +28,7 @@ import requests
 import json
 from django.utils import timezone
 
-from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer, ExamQuestion, ReferenceMaterial
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer, ReferenceMaterial
 
 
 def get_effective_access_level(user, category):
@@ -477,30 +477,21 @@ class FAQListView(LoginRequiredMixin, ListView):
         return FAQ.objects.filter(is_published=True).order_by('order', '-created_at')
 
 
-class ExamQuestionListView(LoginRequiredMixin, ListView):
+class ExamSlidesView(LoginRequiredMixin, DetailView):
     """
     GET /courses/category/<pk>/qa/
-    Shows past exam questions for a category.
-    Respects the same CategoryAccess / AccessTier access control as videos.
+    Shows the past-exam Q&A as an embedded Google Slides presentation.
+    Only paying (PURCHASED) users can view the slides.
     """
-    model = ExamQuestion
+    model = Category
     template_name = "courses/exam_questions.html"
-    context_object_name = "questions"
-
-    def get_queryset(self):
-        self.category = get_object_or_404(Category, pk=self.kwargs["pk"])
-        self.access_level = get_effective_access_level(self.request.user, self.category)
-        return ExamQuestion.objects.filter(
-            category=self.category,
-            is_published=True,
-            minimum_access_level__lte=self.access_level,
-        ).order_by("order")
+    context_object_name = "category"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["category"] = self.category
-        ctx["access_level"] = self.access_level
-        ctx["has_access"] = self.access_level >= AccessTier.PURCHASED
+        access_level = get_effective_access_level(self.request.user, self.object)
+        ctx["access_level"] = access_level
+        ctx["has_access"] = access_level >= AccessTier.PURCHASED
         return ctx
 
 

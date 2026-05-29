@@ -68,113 +68,74 @@
         color: #fff;
     }
 
-    /* ── Accordion Q&A ── */
-    .qa-list {
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-        max-width: 860px;
-    }
-
-    .qa-item {
+    /* ── Slides embed card ── */
+    .slides-card {
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: var(--radius);
         overflow: hidden;
-        transition: border-color .2s;
     }
 
-    .qa-item:hover { border-color: var(--indigo); }
-
-    .qa-question {
-        padding: 20px 24px;
-        font-weight: 700;
-        font-size: 1.05rem;
-        color: var(--text);
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        user-select: none;
-        margin: 0;
-        line-height: 1.4;
-    }
-
-    .qa-question-text { flex: 1; }
-
-    .qa-icon {
-        flex-shrink: 0;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: rgba(99,102,241,.12);
+    .slides-toolbar {
+        padding: 14px 20px;
         display: flex;
         align-items: center;
-        justify-content: center;
-        color: var(--indigo);
-        font-size: 1.2rem;
-        line-height: 1;
-        transition: transform .3s, background .2s;
-        margin-top: 2px;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
     }
 
-    .qa-item.open .qa-icon {
-        transform: rotate(45deg);
-        background: var(--indigo);
-        color: #fff;
-    }
-
-    .qa-body {
-        display: none;
-        padding: 0 24px 24px;
-    }
-
-    .qa-item.open .qa-body { display: block; }
-
-    .qa-answer {
+    .slides-toolbar .label {
+        font-weight: 600;
         color: var(--text);
-        font-size: 0.97rem;
-        line-height: 1.7;
-        padding: 16px 18px;
-        background: rgba(99,102,241,.07);
-        border-radius: 8px;
-        border-left: 3px solid var(--indigo);
-        margin-bottom: 12px;
-    }
-
-    .qa-explanation {
-        color: var(--text-muted);
-        font-size: 0.88rem;
-        line-height: 1.65;
-        padding: 12px 16px;
-        background: var(--surface2);
-        border-radius: 8px;
-    }
-
-    .qa-explanation-label {
-        font-size: 0.78rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-        color: var(--text-muted);
-        margin-bottom: 6px;
-    }
-
-    .qa-num-badge {
+        font-size: 0.95rem;
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        min-width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: var(--surface2);
+        gap: 8px;
+    }
+
+    .slides-open-link {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
         color: var(--text-muted);
-        font-size: 0.78rem;
-        font-weight: 700;
-        flex-shrink: 0;
-        margin-right: 10px;
-        margin-top: 3px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: border-color .2s, color .2s;
+        white-space: nowrap;
+    }
+
+    .slides-open-link:hover {
+        border-color: var(--indigo);
+        color: var(--indigo);
+    }
+
+    .slides-embed-wrapper {
+        position: relative;
+        width: 100%;
+        /* 16:9 ratio */
+        padding-top: 60%;
+        background: #0f172a;
+    }
+
+    .slides-embed-wrapper iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
+    .slides-hint {
+        margin-top: 14px;
+        color: var(--text-muted);
+        font-size: 0.82rem;
+        text-align: center;
     }
 
     /* ── Locked / empty states ── */
@@ -221,7 +182,7 @@
 <div class="page-header">
     <a href="{% url 'courses:video-list' category.pk %}" class="back-link">← {{ category.name }}</a>
     <h1>📝 שאלות בוחן</h1>
-    <p>שאלות ממבחנים קודמים עם תשובות והסברים מפורטים.</p>
+    <p>מצגת שאלות ותשובות ממבחנים קודמים.</p>
 </div>
 
 {# ── Section tabs ── #}
@@ -236,68 +197,39 @@
 <div class="locked-state">
     <span class="state-icon">🔒</span>
     <h2>תוכן זה זמין לרוכשי הקורס</h2>
-    <p>רכוש את הקורס כדי לגשת לשאלות ותשובות ממבחנים קודמים.</p>
+    <p>רכוש את הקורס כדי לצפות במצגת השאלות והתשובות ממבחנים קודמים.</p>
     <a href="{% url 'courses:payment' category.pk %}" class="btn-purchase">💳 לרכישת הקורס</a>
 </div>
 
-{% elif not questions %}
-{# ── Access OK but no content yet ── #}
+{% elif not category.exam_slides_embed_url %}
+{# ── Access OK but no slides configured yet ── #}
 <div class="empty-state">
     <span class="state-icon">📭</span>
-    <p>עדיין אין שאלות בוחן בקטגוריה זו. בקר שוב בקרוב!</p>
+    <p>מצגת השאלות עדיין לא הועלתה לקטגוריה זו. בקר שוב בקרוב!</p>
 </div>
 
 {% else %}
-{# ── Q&A Accordion ── #}
-<div class="qa-list">
-    {% for q in questions %}
-    <div class="qa-item" id="qa-{{ q.pk }}">
-        <div class="qa-question">
-            <span class="qa-num-badge">{{ forloop.counter }}</span>
-            <span class="qa-question-text">{{ q.question }}</span>
-            <span class="qa-icon">+</span>
-        </div>
-        <div class="qa-body">
-            <div class="qa-answer">{{ q.answer|linebreaks }}</div>
-            {% if q.explanation %}
-            <div class="qa-explanation">
-                <div class="qa-explanation-label">💡 הסבר</div>
-                {{ q.explanation|linebreaks }}
-            </div>
-            {% endif %}
-        </div>
+{# ── Embedded Google Slides presentation ── #}
+<div class="slides-card">
+    <div class="slides-toolbar">
+        <span class="label">🖥️ מצגת שאלות ותשובות</span>
+        {% if category.exam_slides_url %}
+        <a href="{{ category.exam_slides_url }}" target="_blank" rel="noopener noreferrer" class="slides-open-link">
+            ↗ פתח במסך מלא
+        </a>
+        {% endif %}
     </div>
-    {% endfor %}
+    <div class="slides-embed-wrapper">
+        <iframe
+            src="{{ category.exam_slides_embed_url }}"
+            allowfullscreen="true"
+            mozallowfullscreen="true"
+            webkitallowfullscreen="true"
+            loading="lazy"
+            title="{{ category.name }} — שאלות בוחן"
+        ></iframe>
+    </div>
 </div>
+<p class="slides-hint">💡 ניתן לנווט בין השקפים בעזרת החצים שבתחתית המצגת או לפתוח במסך מלא.</p>
 {% endif %}
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        document.querySelectorAll(".qa-question").forEach(function (btn) {
-            btn.addEventListener("click", function () {
-                var item = btn.closest(".qa-item");
-                var isOpen = item.classList.contains("open");
-
-                // Close all others
-                document.querySelectorAll(".qa-item.open").forEach(function (el) {
-                    el.classList.remove("open");
-                });
-
-                // Toggle clicked
-                if (!isOpen) {
-                    item.classList.add("open");
-                }
-            });
-        });
-
-        // Auto-open if hash points to a question
-        if (window.location.hash) {
-            var target = document.querySelector(window.location.hash);
-            if (target && target.classList.contains("qa-item")) {
-                target.classList.add("open");
-                target.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-        }
-    });
-</script>
 {% endblock %}
