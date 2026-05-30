@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Exam Q&A — {{ category.name }} — THEFLYINGSQUIREL{% endblock %}
+
+{% block extra_head %}
+<style>
+    .page-header {
+        margin-bottom: 28px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--indigo);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 20px;
+        transition: gap .15s;
+    }
+
+    .back-link:hover { gap: 10px; }
+
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: -0.3px;
+        margin-bottom: 6px;
+    }
+
+    .page-header p { color: var(--text-muted); }
+
+    /* ── Section tabs ── */
+    .section-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 32px;
+        flex-wrap: wrap;
+    }
+
+    .section-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-muted);
+        transition: border-color .2s, color .2s, background .2s;
+    }
+
+    .section-tab:hover {
+        border-color: var(--indigo);
+        color: var(--indigo);
+    }
+
+    .section-tab.active {
+        background: var(--indigo);
+        border-color: var(--indigo);
+        color: #fff;
+    }
+
+    /* ── Slides list ── */
+    .slides-list {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+    }
+
+    .slides-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+    }
+
+    .slides-toolbar {
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .slides-toolbar .label {
+        font-weight: 600;
+        color: var(--text);
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .slides-desc {
+        color: var(--text-muted);
+        font-size: 0.84rem;
+    }
+
+    .slides-open-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: border-color .2s, color .2s;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .slides-open-link:hover {
+        border-color: var(--indigo);
+        color: var(--indigo);
+    }
+
+    .slides-embed-wrapper {
+        position: relative;
+        width: 100%;
+        padding-top: 60%;
+        background: #0f172a;
+    }
+
+    .slides-embed-wrapper iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
+    .slides-hint {
+        margin-top: 14px;
+        color: var(--text-muted);
+        font-size: 0.82rem;
+        text-align: center;
+    }
+
+    /* ── Locked / empty states ── */
+    .locked-state, .empty-state {
+        text-align: center;
+        padding: 70px 0;
+        color: var(--text-muted);
+    }
+
+    .state-icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+        display: block;
+    }
+
+    .locked-state h2 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+
+    .locked-state p { margin-bottom: 24px; }
+
+    .btn-purchase {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 28px;
+        background: var(--indigo);
+        color: #fff;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: background .2s;
+    }
+
+    .btn-purchase:hover { background: #4338ca; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="{% url 'courses:video-list' category.pk %}" class="back-link">← {{ category.name }}</a>
+    <h1>📝 Exam Q&A</h1>
+    <p>Past exam questions and answers presentations.</p>
+</div>
+
+<nav class="section-tabs">
+    <a href="{% url 'courses:video-list' category.pk %}" class="section-tab">🎬 Lessons</a>
+    <a href="{% url 'courses:exam-qa' category.pk %}" class="section-tab active">📝 Exam Q&A</a>
+    <a href="{% url 'courses:resources' category.pk %}" class="section-tab">📚 Resources</a>
+</nav>
+
+{% if not has_access %}
+<div class="locked-state">
+    <span class="state-icon">🔒</span>
+    <h2>This content is available for course buyers</h2>
+    <p>Purchase the course to view past exam Q&A presentations.</p>
+    <a href="{% url 'courses:payment' category.pk %}" class="btn-purchase">💳 Purchase Course</a>
+</div>
+
+{% elif not slides %}
+<div class="empty-state">
+    <span class="state-icon">📭</span>
+    <p>No exam Q&A slides in this category yet. Check back soon!</p>
+</div>
+
+{% else %}
+<div class="slides-list">
+    {% for item in slides %}
+    <div class="slides-card">
+        <div class="slides-toolbar">
+            <span class="label">🖥️ {{ item.title }}</span>
+            {% if item.url %}
+            <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" class="slides-open-link">
+                ↗ Open fullscreen
+            </a>
+            {% endif %}
+        </div>
+        {% if item.description %}
+        <div style="padding: 10px 20px 0; color: var(--text-muted); font-size: 0.85rem;">{{ item.description }}</div>
+        {% endif %}
+        <div class="slides-embed-wrapper">
+            <iframe
+                src="{{ item.embed_url }}"
+                allowfullscreen="true"
+                mozallowfullscreen="true"
+                webkitallowfullscreen="true"
+                loading="lazy"
+                title="{{ item.title }}"
+            ></iframe>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<p class="slides-hint">💡 Navigate between slides using the arrows at the bottom, or open in fullscreen.</p>
+{% endif %}
+{% endblock %}

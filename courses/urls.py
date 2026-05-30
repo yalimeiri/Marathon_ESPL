@@ -17,6 +17,12 @@ urlpatterns = [
     # Video list for a specific category → /courses/category/<pk>/
     path("category/<int:pk>/", views.VideoListView.as_view(), name="video-list"),
 
+    # Past exam Q&A → /courses/category/<pk>/qa/
+    path("category/<int:pk>/qa/", views.ExamSlidesView.as_view(), name="exam-qa"),
+
+    # Reference materials → /courses/category/<pk>/resources/
+    path("category/<int:pk>/resources/", views.ResourceListView.as_view(), name="resources"),
+
     # Individual video detail → /courses/video/<pk>/
     path("video/<int:pk>/", views.VideoDetailView.as_view(), name="video-detail"),
 

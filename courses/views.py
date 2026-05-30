@@ -28,7 +28,7 @@ import requests
 import json
 from django.utils import timezone
 
-from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer, ExamSlides, ReferenceMaterial
 
 
 def get_effective_access_level(user, category):
@@ -86,10 +86,11 @@ class VideoListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["category"] = self.category
-        
+
         user_level = get_effective_access_level(self.request.user, self.category)
         ctx["user_access_level"] = user_level
-        
+        ctx["has_access"] = user_level >= AccessTier.PURCHASED
+
         # Attach explicit boolean states to nested videos
         for subcategory in ctx["subcategories"]:
             for video in subcategory.videos.all():
@@ -418,9 +419,9 @@ def ask_question(request, video_pk):
     body = request.POST.get('body', '').strip()
     if body:
         VideoQuestion.objects.create(video=video, author=request.user, body=body)
-        messages.success(request, 'השאלה נשלחה בהצלחה! 🎉')
+        messages.success(request, 'Your question was submitted successfully! 🎉')
     else:
-        messages.error(request, 'השאלה לא יכולה להיות ריקה.')
+        messages.error(request, 'Question cannot be empty.')
     return redirect('courses:video-detail', pk=video_pk)
 
 
@@ -435,9 +436,9 @@ def post_answer(request, question_pk):
     body = request.POST.get('body', '').strip()
     if body:
         VideoAnswer.objects.create(question=question, author=request.user, body=body)
-        messages.success(request, 'התשובה נשלחה בהצלחה! 🎉')
+        messages.success(request, 'Your answer was submitted successfully! 🎉')
     else:
-        messages.error(request, 'התשובה לא יכולה להיות ריקה.')
+        messages.error(request, 'Answer cannot be empty.')
     return redirect('courses:video-detail', pk=question.video_id)
 
 
@@ -453,4 +454,70 @@ class FAQListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return FAQ.objects.filter(is_published=True).order_by('order', '-created_at')
+
+
+class ExamSlidesView(LoginRequiredMixin, ListView):
+    """
+    GET /courses/category/<pk>/qa/
+    Shows Exam Q&A Google Slides presentations for a category.
+    Staff see all published slides; others need PURCHASED level.
+    """
+    model = ExamSlides
+    template_name = "courses/exam_questions.html"
+    context_object_name = "slides"
+
+    def get_queryset(self):
+        self.category = get_object_or_404(Category, pk=self.kwargs["pk"])
+        if self.request.user.is_staff:
+            self.access_level = AccessTier.PURCHASED
+            return ExamSlides.objects.filter(
+                category=self.category,
+                is_published=True,
+            ).order_by("order")
+        self.access_level = get_effective_access_level(self.request.user, self.category)
+        return ExamSlides.objects.filter(
+            category=self.category,
+            is_published=True,
+            minimum_access_level__lte=self.access_level,
+        ).order_by("order")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["category"] = self.category
+        ctx["access_level"] = self.access_level
+        ctx["has_access"] = self.request.user.is_staff or self.access_level >= AccessTier.PURCHASED
+        return ctx
+
+
+class ResourceListView(LoginRequiredMixin, ListView):
+    """
+    GET /courses/category/<pk>/resources/
+    Shows reference materials (PDF links) for a category.
+    Staff see all published materials; others need PURCHASED level.
+    """
+    model = ReferenceMaterial
+    template_name = "courses/resources.html"
+    context_object_name = "materials"
+
+    def get_queryset(self):
+        self.category = get_object_or_404(Category, pk=self.kwargs["pk"])
+        if self.request.user.is_staff:
+            self.access_level = AccessTier.PURCHASED
+            return ReferenceMaterial.objects.filter(
+                category=self.category,
+                is_published=True,
+            ).order_by("order")
+        self.access_level = get_effective_access_level(self.request.user, self.category)
+        return ReferenceMaterial.objects.filter(
+            category=self.category,
+            is_published=True,
+            minimum_access_level__lte=self.access_level,
+        ).order_by("order")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["category"] = self.category
+        ctx["access_level"] = self.access_level
+        ctx["has_access"] = self.request.user.is_staff or self.access_level >= AccessTier.PURCHASED
+        return ctx
 

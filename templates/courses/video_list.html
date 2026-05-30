@@ -172,6 +172,40 @@
             transform: translateY(0);
         }
     }
+
+    /* ── Section tabs ── */
+    .section-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 32px;
+        flex-wrap: wrap;
+    }
+
+    .section-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-muted);
+        transition: border-color .2s, color .2s, background .2s;
+    }
+
+    .section-tab:hover {
+        border-color: var(--indigo);
+        color: var(--indigo);
+    }
+
+    .section-tab.active {
+        background: var(--indigo);
+        border-color: var(--indigo);
+        color: #fff;
+    }
 </style>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -206,6 +240,13 @@
     </div>
     {% endif %}
 </div>
+
+{# ── Section tabs ── #}
+<nav class="section-tabs">
+    <a href="{% url 'courses:video-list' category.pk %}" class="section-tab active">🎬 Lessons</a>
+    <a href="{% url 'courses:exam-qa' category.pk %}" class="section-tab">📝 Exam Q&A</a>
+    <a href="{% url 'courses:resources' category.pk %}" class="section-tab">📚 Resources</a>
+</nav>
 
 {% if subcategories %}
 <div class="video-list">

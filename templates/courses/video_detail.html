@@ -82,7 +82,7 @@
         {% with url=video.video_url|default_if_none:"" %}
         {% if "youtube.com" not in url and "youtu.be" not in url and "drive.google.com" not in url %}
         <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:12px;" id="zoom-hint-text">
-            🖱️ <strong>לתשומת ליבכם:</strong> ניתן להגדיל ולהקטין את התמונה בעזרת העכבר 💡
+            🖱️ <strong>Note:</strong> You can zoom in and out using your mouse scroll 💡
         </p>
         {% endif %}
         {% endwith %}
@@ -266,20 +266,20 @@
         <div id="qa-section" style="margin-top:40px;">
             <h2
                 style="font-size:1.3rem;font-weight:700;color:#c7d2fe;margin-bottom:24px;border-bottom:1px solid #252838;padding-bottom:12px;">
-                💬 שאלות ותשובות
+                💬 Q&A
             </h2>
 
             <!-- Ask a question form -->
             <form method="post" action="{% url 'courses:ask-question' video.pk %}" style="margin-bottom:32px;">
                 {% csrf_token %}
                 <div style="display:flex;flex-direction:column;gap:10px;">
-                    <textarea name="body" rows="3" placeholder="כתוב את שאלתך כאן..." required
+                    <textarea name="body" rows="3" placeholder="Write your question here..." required
                         style="width:100%;padding:12px 16px;background:#13151f;border:1px solid #252838;border-radius:10px;color:#e2e4f0;font-family:inherit;font-size:0.95rem;resize:vertical;outline:none;transition:border-color .2s;"
                         onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#252838'"></textarea>
                     <button type="submit"
                         style="align-self:flex-start;background:#6366f1;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:600;font-size:0.9rem;font-family:inherit;cursor:pointer;transition:background .15s;"
                         onmouseover="this.style.background='#4f52d8'" onmouseout="this.style.background='#6366f1'">
-                        ❔ שלח שאלה
+                        ❔ Submit Question
                     </button>
                 </div>
             </form>
@@ -309,7 +309,7 @@
                                 <span style="color:#475569;font-size:0.8rem;">{{ q.created_at|date:"d/m/Y H:i" }}</span>
                                 {% if q.author == request.user %}
                                 <span
-                                    style="background:#1e2235;color:#6366f1;font-size:0.75rem;padding:2px 8px;border-radius:99px;font-weight:600;">אתה</span>
+                                    style="background:#1e2235;color:#6366f1;font-size:0.75rem;padding:2px 8px;border-radius:99px;font-weight:600;">You</span>
                                 {% endif %}
                             </div>
                             <p style="color:#e2e4f0;font-size:0.95rem;line-height:1.6;margin:0;">{{ q.body }}</p>
@@ -349,18 +349,18 @@
                     <div style="border-top:1px solid #252838;padding:0;">
                         <button type="button" onclick="toggleReply({{ q.pk }})"
                             style="width:100%;background:none;border:none;color:#6366f1;font-size:0.85rem;font-weight:600;padding:10px 20px;cursor:pointer;text-align:right;font-family:inherit;">
-                            ↩ ענה על שאלה זו
+                            ↩ Reply to this question
                         </button>
                         <div id="reply-form-{{ q.pk }}" style="display:none;padding:0 20px 16px;">
                             <form method="post" action="{% url 'courses:post-answer' q.pk %}">
                                 {% csrf_token %}
-                                <textarea name="body" rows="2" placeholder="כתוב את תשובתך..." required
+                                <textarea name="body" rows="2" placeholder="Write your answer..." required
                                     style="width:100%;padding:10px 14px;background:#0b0d14;border:1px solid #252838;border-radius:8px;color:#e2e4f0;font-family:inherit;font-size:0.9rem;resize:vertical;outline:none;margin-bottom:8px;"
                                     onfocus="this.style.borderColor='#6366f1'"
                                     onblur="this.style.borderColor='#252838'"></textarea>
                                 <button type="submit"
                                     style="background:#059669;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:600;font-size:0.85rem;font-family:inherit;cursor:pointer;">
-                                    ✅ שלח תשובה
+                                    ✅ Submit Answer
                                 </button>
                             </form>
                         </div>

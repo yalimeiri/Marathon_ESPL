@@ -194,7 +194,7 @@ class SingleDeviceLoginMiddleware:
 
         messages.error(
             request,
-            "🔒 החשבון שלך נעול למכשיר אחר. לא ניתן להיכנס מדפדפן/מחשב אחר.",
+            "🔒 Your account is locked to another device. You cannot log in from a different browser/computer.",
         )
 
         login_url = getattr(settings, "LOGIN_URL", "/accounts/login/")

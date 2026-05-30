@@ -84,14 +84,14 @@ def on_google_signup(sender, request, user, sociallogin=None, **kwargs):
     try:
         site_url = request.build_absolute_uri('/courses/')
         send_mail(
-            subject="ברוך הבא ל-TheFlyingSquirrel!",
+            subject="Welcome to TheFlyingSquirrel!",
             message=(
-                f"שלום {user.username},\n\n"
-                f"ההרשמה שלך הסתיימה בהצלחה!\n\n"
-                f"שם משתמש: {user.username}\n\n"
-                f"כדי להיכנס לאתר: {site_url}\n\n"
-                f"שים לב: החשבון שלך נעול למחשב/דפדפן שבו נרשמת.\n\n"
-                f"בברכה,\nצוות TheFlyingSquirrel"
+                f"Hello {user.username},\n\n"
+                f"Your registration was completed successfully!\n\n"
+                f"Username: {user.username}\n\n"
+                f"To access the site: {site_url}\n\n"
+                f"Note: Your account is locked to the computer/browser you registered with.\n\n"
+                f"Best regards,\nTheFlyingSquirrel Team"
             ),
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],

@@ -486,3 +486,82 @@ class VideoAnswer(models.Model):
     def __str__(self):
         return f"{self.author.username} → {self.question.body[:40]}"
 
+
+class ExamSlides(models.Model):
+    """
+    A Google Slides presentation embedded on the Exam Q&A page.
+    Each category can have multiple presentations (e.g. per topic / year).
+    """
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="exam_slides",
+        verbose_name="Category",
+    )
+    title = models.CharField(max_length=300, verbose_name="Title")
+    description = models.TextField(blank=True, verbose_name="Description")
+    embed_url = models.URLField(
+        max_length=500,
+        verbose_name="Slides Embed URL",
+        help_text="Google Slides → File → Share → Publish to web → Embed → "
+                  "copy only the src URL (not the whole embed code).",
+    )
+    url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="Open-in-new-tab URL",
+        help_text="Optional. Regular link for the 'open in full screen' button.",
+    )
+    order = models.PositiveIntegerField(default=0, verbose_name="Order")
+    is_published = models.BooleanField(default=True, verbose_name="Published")
+    minimum_access_level = models.IntegerField(
+        choices=AccessTier.choices,
+        default=AccessTier.PURCHASED,
+        verbose_name="Minimum Access Level",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Exam Q&A Slides"
+        verbose_name_plural = "Exam Q&A Slides"
+        ordering = ["order", "title"]
+
+    def __str__(self):
+        return self.title
+
+
+class ReferenceMaterial(models.Model):
+    """
+    A reference item for exam prep — a link to a downloadable/printable file
+    (PDF, doc, etc.) shown on the Reference Materials page.
+    """
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="resources",
+        verbose_name="Category",
+    )
+    title = models.CharField(max_length=300, verbose_name="Title")
+    description = models.TextField(blank=True, verbose_name="Description")
+    url = models.URLField(
+        max_length=500,
+        verbose_name="File / Link URL",
+        help_text="Direct link to the PDF (or other file) to print/download.",
+    )
+    order = models.PositiveIntegerField(default=0, verbose_name="Order")
+    is_published = models.BooleanField(default=True, verbose_name="Published")
+    minimum_access_level = models.IntegerField(
+        choices=AccessTier.choices,
+        default=AccessTier.PURCHASED,
+        verbose_name="Minimum Access Level",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Reference Material"
+        verbose_name_plural = "Reference Materials"
+        ordering = ["order", "title"]
+
+    def __str__(self):
+        return self.title
+

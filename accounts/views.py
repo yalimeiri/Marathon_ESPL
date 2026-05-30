@@ -39,20 +39,20 @@ class RegisterView(CreateView):
         if slot_granted:
             messages.success(
                 self.request,
-                "🎉 מזל טוב! קיבלת גישה חינמית לכל הקורסים הכלולים במבצע!"
+                "🎉 Congratulations! You received free access to all courses included in the promotion!"
             )
 
         try:
             site_url = self.request.build_absolute_uri('/courses/')
             send_mail(
-                subject="ברוך הבא ל-TheFlyingSquirrel!",
+                subject="Welcome to TheFlyingSquirrel!",
                 message=(
-                    f"שלום {user.username},\n\n"
-                    f"ההרשמה שלך הסתיימה בהצלחה!\n\n"
-                    f"שם משתמש: {user.username}\n\n"
-                    f"כדי להיכנס לאתר: {site_url}\n\n"
-                    f"שים לב: החשבון שלך נעול למחשב/דפדפן שבו נרשמת.\n\n"
-                    f"בברכה,\nצוות TheFlyingSquirrel"
+                    f"Hello {user.username},\n\n"
+                    f"Your registration was completed successfully!\n\n"
+                    f"Username: {user.username}\n\n"
+                    f"To access the site: {site_url}\n\n"
+                    f"Note: Your account is locked to the computer/browser you registered with.\n\n"
+                    f"Best regards,\nTheFlyingSquirrel Team"
                 ),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
@@ -114,8 +114,8 @@ class CustomPasswordResetView(PasswordResetView):
             if not self._device_allows_password_reset(user):
                 messages.error(
                     self.request,
-                    "🔒 איפוס סיסמה אפשרי רק מהמכשיר המקורי שבו נרשמת. "
-                    "השתמש במחשב/דפדפן המקורי שלך כדי לאפס את הסיסמה."
+                    "🔒 Password reset is only possible from the original device you registered with. "
+                    "Please use your original computer/browser to reset your password."
                 )
                 return redirect(reverse("accounts:password_reset"))
 
