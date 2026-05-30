@@ -227,19 +227,6 @@ class Category(models.Model):
     description = models.TextField(blank=True, verbose_name="Description")
     price = models.IntegerField(default=100, verbose_name="Price (NIS)", help_text="Set the price in NIS for this course.")
     order = models.PositiveIntegerField(default=0, blank=False, null=False, verbose_name="Order", help_text="Display order (drag-and-drop in Admin).")
-    exam_slides_embed_url = models.URLField(
-        max_length=500,
-        blank=True,
-        verbose_name="Exam Q&A — Slides Embed URL",
-        help_text="Google Slides: File → Share → Publish to web → Embed → copy the src URL only "
-                  "(not the whole <iframe> tag). Shown on the Exam Q&A page to paying users.",
-    )
-    exam_slides_url = models.URLField(
-        max_length=500,
-        blank=True,
-        verbose_name="Exam Q&A — Open-in-new-tab URL",
-        help_text="Optional. A normal link to the presentation for the 'open in new tab' button.",
-    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -517,6 +504,49 @@ class VideoAnswer(models.Model):
 
     def __str__(self):
         return f"{self.author.username} → {self.question.body[:40]}"
+
+
+class ExamSlides(models.Model):
+    """
+    A Google Slides presentation embedded on the Exam Q&A page.
+    Each category can have multiple presentations (e.g. per topic / year).
+    """
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="exam_slides",
+        verbose_name="Category",
+    )
+    title = models.CharField(max_length=300, verbose_name="Title")
+    description = models.TextField(blank=True, verbose_name="Description")
+    embed_url = models.URLField(
+        max_length=500,
+        verbose_name="Slides Embed URL",
+        help_text="Google Slides → File → Share → Publish to web → Embed → "
+                  "copy only the src URL (not the whole <iframe> tag).",
+    )
+    url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="Open-in-new-tab URL",
+        help_text="Optional. Regular link for the 'open in full screen' button.",
+    )
+    order = models.PositiveIntegerField(default=0, verbose_name="Order")
+    is_published = models.BooleanField(default=True, verbose_name="Published")
+    minimum_access_level = models.IntegerField(
+        choices=AccessTier.choices,
+        default=AccessTier.PURCHASED,
+        verbose_name="Minimum Access Level",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Exam Q&A Slides"
+        verbose_name_plural = "Exam Q&A Slides"
+        ordering = ["order", "title"]
+
+    def __str__(self):
+        return self.title
 
 
 class ReferenceMaterial(models.Model):

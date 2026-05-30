@@ -24,7 +24,7 @@ from .models import (
     Category, Subcategory, Video, Purchase, CategoryAccess,
     SiteConfiguration, FAQ, VideoQuestion, VideoAnswer,
     FreeAccessCampaign, FreeAccessSlot,
-    ReferenceMaterial,
+    ExamSlides, ReferenceMaterial,
 )
 
 @admin.register(Subcategory)
@@ -408,6 +408,18 @@ class FreeAccessSlotAdmin(ModelAdmin):
     readonly_fields = ('granted_at',)
     raw_id_fields = ('user',)
     actions = [grant_free_access_action, grant_free_access_no_count_action]
+
+
+# ── Exam Q&A Slides ───────────────────────────────────────────────────────────
+
+@admin.register(ExamSlides)
+class ExamSlidesAdmin(ModelAdmin):
+    list_display = ("title", "category", "order", "is_published", "minimum_access_level")
+    list_editable = ("order", "is_published")
+    list_filter = ("category", "is_published", "minimum_access_level")
+    search_fields = ("title", "description")
+    ordering_field = "order"
+    save_on_top = True
 
 
 # ── Reference Materials (PDF / file links) ───────────────────────────────────

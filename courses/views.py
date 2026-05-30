@@ -28,7 +28,7 @@ import requests
 import json
 from django.utils import timezone
 
-from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer, ReferenceMaterial
+from .models import Category, Subcategory, Video, Purchase, CategoryAccess, AccessTier, SiteConfiguration, FAQ, VideoQuestion, VideoAnswer, ExamSlides, ReferenceMaterial
 
 
 def get_effective_access_level(user, category):
@@ -477,25 +477,36 @@ class FAQListView(LoginRequiredMixin, ListView):
         return FAQ.objects.filter(is_published=True).order_by('order', '-created_at')
 
 
-class ExamSlidesView(LoginRequiredMixin, DetailView):
+class ExamSlidesView(LoginRequiredMixin, ListView):
     """
     GET /courses/category/<pk>/qa/
-    Shows the past-exam Q&A as an embedded Google Slides presentation.
-    Staff always have access; others need PURCHASED level.
+    Shows Exam Q&A Google Slides presentations for a category.
+    Staff see all published slides; others need PURCHASED level.
     """
-    model = Category
+    model = ExamSlides
     template_name = "courses/exam_questions.html"
-    context_object_name = "category"
+    context_object_name = "slides"
+
+    def get_queryset(self):
+        self.category = get_object_or_404(Category, pk=self.kwargs["pk"])
+        if self.request.user.is_staff:
+            self.access_level = AccessTier.PURCHASED
+            return ExamSlides.objects.filter(
+                category=self.category,
+                is_published=True,
+            ).order_by("order")
+        self.access_level = get_effective_access_level(self.request.user, self.category)
+        return ExamSlides.objects.filter(
+            category=self.category,
+            is_published=True,
+            minimum_access_level__lte=self.access_level,
+        ).order_by("order")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        if self.request.user.is_staff:
-            ctx["access_level"] = AccessTier.PURCHASED
-            ctx["has_access"] = True
-        else:
-            access_level = get_effective_access_level(self.request.user, self.object)
-            ctx["access_level"] = access_level
-            ctx["has_access"] = access_level >= AccessTier.PURCHASED
+        ctx["category"] = self.category
+        ctx["access_level"] = self.access_level
+        ctx["has_access"] = self.request.user.is_staff or self.access_level >= AccessTier.PURCHASED
         return ctx
 
 

@@ -3,7 +3,6 @@
 
 {% block extra_head %}
 <style>
-    /* ── Page header ── */
     .page-header {
         margin-bottom: 28px;
         padding-bottom: 24px;
@@ -68,7 +67,13 @@
         color: #fff;
     }
 
-    /* ── Slides embed card ── */
+    /* ── Slides list ── */
+    .slides-list {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+    }
+
     .slides-card {
         background: var(--surface);
         border: 1px solid var(--border);
@@ -91,10 +96,15 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
+        flex: 1;
+    }
+
+    .slides-desc {
+        color: var(--text-muted);
+        font-size: 0.84rem;
     }
 
     .slides-open-link {
-        margin-left: auto;
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -107,6 +117,7 @@
         text-decoration: none;
         transition: border-color .2s, color .2s;
         white-space: nowrap;
+        flex-shrink: 0;
     }
 
     .slides-open-link:hover {
@@ -117,7 +128,6 @@
     .slides-embed-wrapper {
         position: relative;
         width: 100%;
-        /* 16:9 ratio */
         padding-top: 60%;
         background: #0f172a;
     }
@@ -182,10 +192,9 @@
 <div class="page-header">
     <a href="{% url 'courses:video-list' category.pk %}" class="back-link">← {{ category.name }}</a>
     <h1>📝 שאלות בוחן</h1>
-    <p>מצגת שאלות ותשובות ממבחנים קודמים.</p>
+    <p>מצגות שאלות ותשובות ממבחנים קודמים.</p>
 </div>
 
-{# ── Section tabs ── #}
 <nav class="section-tabs">
     <a href="{% url 'courses:video-list' category.pk %}" class="section-tab">🎬 שיעורים</a>
     <a href="{% url 'courses:exam-qa' category.pk %}" class="section-tab active">📝 שאלות בוחן</a>
@@ -193,7 +202,6 @@
 </nav>
 
 {% if not has_access %}
-{# ── User doesn't have purchased access ── #}
 <div class="locked-state">
     <span class="state-icon">🔒</span>
     <h2>תוכן זה זמין לרוכשי הקורס</h2>
@@ -201,34 +209,39 @@
     <a href="{% url 'courses:payment' category.pk %}" class="btn-purchase">💳 לרכישת הקורס</a>
 </div>
 
-{% elif not category.exam_slides_embed_url %}
-{# ── Access OK but no slides configured yet ── #}
+{% elif not slides %}
 <div class="empty-state">
     <span class="state-icon">📭</span>
-    <p>מצגת השאלות עדיין לא הועלתה לקטגוריה זו. בקר שוב בקרוב!</p>
+    <p>עדיין אין מצגות שאלות בוחן בקטגוריה זו. בקר שוב בקרוב!</p>
 </div>
 
 {% else %}
-{# ── Embedded Google Slides presentation ── #}
-<div class="slides-card">
-    <div class="slides-toolbar">
-        <span class="label">🖥️ מצגת שאלות ותשובות</span>
-        {% if category.exam_slides_url %}
-        <a href="{{ category.exam_slides_url }}" target="_blank" rel="noopener noreferrer" class="slides-open-link">
-            ↗ פתח במסך מלא
-        </a>
+<div class="slides-list">
+    {% for item in slides %}
+    <div class="slides-card">
+        <div class="slides-toolbar">
+            <span class="label">🖥️ {{ item.title }}</span>
+            {% if item.url %}
+            <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" class="slides-open-link">
+                ↗ פתח במסך מלא
+            </a>
+            {% endif %}
+        </div>
+        {% if item.description %}
+        <div style="padding: 10px 20px 0; color: var(--text-muted); font-size: 0.85rem;">{{ item.description }}</div>
         {% endif %}
+        <div class="slides-embed-wrapper">
+            <iframe
+                src="{{ item.embed_url }}"
+                allowfullscreen="true"
+                mozallowfullscreen="true"
+                webkitallowfullscreen="true"
+                loading="lazy"
+                title="{{ item.title }}"
+            ></iframe>
+        </div>
     </div>
-    <div class="slides-embed-wrapper">
-        <iframe
-            src="{{ category.exam_slides_embed_url }}"
-            allowfullscreen="true"
-            mozallowfullscreen="true"
-            webkitallowfullscreen="true"
-            loading="lazy"
-            title="{{ category.name }} — שאלות בוחן"
-        ></iframe>
-    </div>
+    {% endfor %}
 </div>
 <p class="slides-hint">💡 ניתן לנווט בין השקפים בעזרת החצים שבתחתית המצגת או לפתוח במסך מלא.</p>
 {% endif %}
