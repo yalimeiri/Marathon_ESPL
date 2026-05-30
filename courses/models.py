@@ -523,7 +523,7 @@ class ExamSlides(models.Model):
         max_length=500,
         verbose_name="Slides Embed URL",
         help_text="Google Slides → File → Share → Publish to web → Embed → "
-                  "copy only the src URL (not the whole <iframe> tag).",
+                  "copy only the src URL (not the whole embed code).",
     )
     url = models.URLField(
         max_length=500,
