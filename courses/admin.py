@@ -418,7 +418,6 @@ class ExamSlidesAdmin(ModelAdmin):
     list_editable = ("order", "is_published")
     list_filter = ("category", "is_published", "minimum_access_level")
     search_fields = ("title", "description")
-    ordering_field = "order"
     save_on_top = True
 
 
