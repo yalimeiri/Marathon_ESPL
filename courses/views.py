@@ -440,9 +440,9 @@ def ask_question(request, video_pk):
     body = request.POST.get('body', '').strip()
     if body:
         VideoQuestion.objects.create(video=video, author=request.user, body=body)
-        messages.success(request, 'השאלה נשלחה בהצלחה! 🎉')
+        messages.success(request, 'Your question was submitted successfully! 🎉')
     else:
-        messages.error(request, 'השאלה לא יכולה להיות ריקה.')
+        messages.error(request, 'Question cannot be empty.')
     return redirect('courses:video-detail', pk=video_pk)
 
 
@@ -457,9 +457,9 @@ def post_answer(request, question_pk):
     body = request.POST.get('body', '').strip()
     if body:
         VideoAnswer.objects.create(question=question, author=request.user, body=body)
-        messages.success(request, 'התשובה נשלחה בהצלחה! 🎉')
+        messages.success(request, 'Your answer was submitted successfully! 🎉')
     else:
-        messages.error(request, 'התשובה לא יכולה להיות ריקה.')
+        messages.error(request, 'Answer cannot be empty.')
     return redirect('courses:video-detail', pk=question.video_id)
 
 

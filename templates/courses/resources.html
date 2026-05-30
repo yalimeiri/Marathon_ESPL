@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}חומר עזר — {{ category.name }} — THEFLYINGSQUIREL{% endblock %}
+{% block title %}Resources — {{ category.name }} — THEFLYINGSQUIREL{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -181,31 +181,31 @@
 {% block content %}
 <div class="page-header">
     <a href="{% url 'courses:video-list' category.pk %}" class="back-link">← {{ category.name }}</a>
-    <h1>📚 חומר עזר</h1>
-    <p>קבצים וחומרי לימוד להדפסה ולשימוש לקראת הבוחן.</p>
+    <h1>📚 Resources</h1>
+    <p>Study materials and files to print and use for exam preparation.</p>
 </div>
 
 {# ── Section tabs ── #}
 <nav class="section-tabs">
-    <a href="{% url 'courses:video-list' category.pk %}" class="section-tab">🎬 שיעורים</a>
-    <a href="{% url 'courses:exam-qa' category.pk %}" class="section-tab">📝 שאלות בוחן</a>
-    <a href="{% url 'courses:resources' category.pk %}" class="section-tab active">📚 חומר עזר</a>
+    <a href="{% url 'courses:video-list' category.pk %}" class="section-tab">🎬 Lessons</a>
+    <a href="{% url 'courses:exam-qa' category.pk %}" class="section-tab">📝 Exam Q&A</a>
+    <a href="{% url 'courses:resources' category.pk %}" class="section-tab active">📚 Resources</a>
 </nav>
 
 {% if not has_access %}
 {# ── User doesn't have purchased access ── #}
 <div class="locked-state">
     <span class="state-icon">🔒</span>
-    <h2>תוכן זה זמין לרוכשי הקורס</h2>
-    <p>רכוש את הקורס כדי לגשת לחומרי העזר והמצגות.</p>
-    <a href="{% url 'courses:payment' category.pk %}" class="btn-purchase">💳 לרכישת הקורס</a>
+    <h2>This content is available for course buyers</h2>
+    <p>Purchase the course to access study materials and resources.</p>
+    <a href="{% url 'courses:payment' category.pk %}" class="btn-purchase">💳 Purchase Course</a>
 </div>
 
 {% elif not materials %}
 {# ── Access OK but no content yet ── #}
 <div class="empty-state">
     <span class="state-icon">📭</span>
-    <p>עדיין אין חומר עזר בקטגוריה זו. בקר שוב בקרוב!</p>
+    <p>No resources in this category yet. Check back soon!</p>
 </div>
 
 {% else %}
