@@ -481,7 +481,7 @@ class ExamSlidesView(LoginRequiredMixin, DetailView):
     """
     GET /courses/category/<pk>/qa/
     Shows the past-exam Q&A as an embedded Google Slides presentation.
-    Only paying (PURCHASED) users can view the slides.
+    Staff always have access; others need PURCHASED level.
     """
     model = Category
     template_name = "courses/exam_questions.html"
@@ -489,17 +489,21 @@ class ExamSlidesView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        access_level = get_effective_access_level(self.request.user, self.object)
-        ctx["access_level"] = access_level
-        ctx["has_access"] = access_level >= AccessTier.PURCHASED
+        if self.request.user.is_staff:
+            ctx["access_level"] = AccessTier.PURCHASED
+            ctx["has_access"] = True
+        else:
+            access_level = get_effective_access_level(self.request.user, self.object)
+            ctx["access_level"] = access_level
+            ctx["has_access"] = access_level >= AccessTier.PURCHASED
         return ctx
 
 
 class ResourceListView(LoginRequiredMixin, ListView):
     """
     GET /courses/category/<pk>/resources/
-    Shows reference materials (links + Google Slides embeds) for a category.
-    Respects the same CategoryAccess / AccessTier access control as videos.
+    Shows reference materials (PDF links) for a category.
+    Staff see all published materials; others need PURCHASED level.
     """
     model = ReferenceMaterial
     template_name = "courses/resources.html"
@@ -507,6 +511,12 @@ class ResourceListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         self.category = get_object_or_404(Category, pk=self.kwargs["pk"])
+        if self.request.user.is_staff:
+            self.access_level = AccessTier.PURCHASED
+            return ReferenceMaterial.objects.filter(
+                category=self.category,
+                is_published=True,
+            ).order_by("order")
         self.access_level = get_effective_access_level(self.request.user, self.category)
         return ReferenceMaterial.objects.filter(
             category=self.category,
@@ -518,6 +528,6 @@ class ResourceListView(LoginRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx["category"] = self.category
         ctx["access_level"] = self.access_level
-        ctx["has_access"] = self.access_level >= AccessTier.PURCHASED
+        ctx["has_access"] = self.request.user.is_staff or self.access_level >= AccessTier.PURCHASED
         return ctx
 
