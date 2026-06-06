@@ -11,6 +11,8 @@ configured cloud bucket (S3 / Cloudinary) when storage backends are
 activated in settings.py.
 """
 
+import logging
+
 from django.db import models
 from django.conf import settings
 
@@ -392,7 +394,11 @@ def sync_purchase_to_access(sender, instance, **kwargs):
     When a Purchase is created or updated, recalculate the user's access
     using the unified calculator.
     """
-    recalculate_user_access(instance.user, instance.category)
+    try:
+        recalculate_user_access(instance.user, instance.category)
+    except Exception:
+        logger = logging.getLogger(__name__)
+        logger.exception("sync_purchase_to_access failed for Purchase pk=%s", instance.pk)
 
 
 @receiver(post_delete, sender=Purchase)
@@ -402,11 +408,15 @@ def cleanup_access_on_purchase_delete(sender, instance, **kwargs):
     Skip if the user themselves was deleted (cascade), otherwise
     get_or_create on CategoryAccess hits an IntegrityError.
     """
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-    if not User.objects.filter(pk=instance.user_id).exists():
-        return
-    recalculate_user_access(instance.user, instance.category)
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if not User.objects.filter(pk=instance.user_id).exists():
+            return
+        recalculate_user_access(instance.user, instance.category)
+    except Exception:
+        logger = logging.getLogger(__name__)
+        logger.exception("cleanup_access_on_purchase_delete failed for Purchase pk=%s", instance.pk)
 
 
 class FAQ(models.Model):

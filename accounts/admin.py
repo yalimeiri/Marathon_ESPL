@@ -38,11 +38,24 @@ def reset_device_lock(modeladmin, request, queryset):
 def delete_selected_users(modeladmin, request, queryset):
     """Deletes the selected users permanently."""
     count = queryset.count()
-    queryset.delete()
-    modeladmin.message_user(
-        request,
-        f"{count} user(s) deleted successfully.",
-    )
+    deleted_count = 0
+    errors = []
+    for user in queryset:
+        try:
+            username = user.username
+            user.delete()
+            deleted_count += 1
+        except Exception as e:
+            errors.append(f"{username}: {e}")
+    if deleted_count:
+        modeladmin.message_user(request, f"{deleted_count} user(s) deleted successfully.")
+    if errors:
+        from django.contrib import messages
+        modeladmin.message_user(
+            request,
+            f"Failed to delete {len(errors)} user(s): {'; '.join(errors)}",
+            messages.ERROR,
+        )
 
 
 @admin.register(CustomUser)
