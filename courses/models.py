@@ -399,7 +399,13 @@ def sync_purchase_to_access(sender, instance, **kwargs):
 def cleanup_access_on_purchase_delete(sender, instance, **kwargs):
     """
     When a Purchase is deleted (e.g. via Admin), recalculate access.
+    Skip if the user themselves was deleted (cascade), otherwise
+    get_or_create on CategoryAccess hits an IntegrityError.
     """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    if not User.objects.filter(pk=instance.user_id).exists():
+        return
     recalculate_user_access(instance.user, instance.category)
 
 
