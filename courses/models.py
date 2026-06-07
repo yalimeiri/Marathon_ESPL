@@ -361,13 +361,35 @@ from .access import recalculate_user_access
 @receiver(post_save, sender=FreeAccessCampaign)
 def on_campaign_save(sender, instance, **kwargs):
     """
-    When a campaign is deactivated (is_active flips to False), revoke
-    PURCHASED-level CategoryAccess for slot holders — UNLESS the user
-    independently has an approved Purchase for that category.
+    Handles two scenarios:
 
-    Uses a bulk SQL query with a subquery exclusion for performance.
+    1. Campaign is ACTIVE (or just saved with new categories):
+       Recalculate access for every existing slot holder across all
+       included categories.  This ensures that slots granted BEFORE
+       categories were added still get their CategoryAccess records.
+
+    2. Campaign is DEACTIVATED:
+       Revoke PURCHASED-level CategoryAccess for slot holders — UNLESS
+       the user independently has an approved Purchase for that category.
     """
-    if not instance.is_active:
+    if instance.is_active:
+        # Grant / refresh access for all existing slot holders
+        slot_users = instance.slots.select_related('user').values_list('user', flat=True)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        users = User.objects.filter(pk__in=slot_users)
+        categories = instance.included_categories.all()
+        for user in users:
+            for category in categories:
+                try:
+                    recalculate_user_access(user, category)
+                except Exception:
+                    logger = logging.getLogger(__name__)
+                    logger.exception(
+                        "on_campaign_save: failed to recalculate access "
+                        "for user pk=%s, category pk=%s", user.pk, category.pk
+                    )
+    else:
         slot_user_ids = instance.slots.values_list('user_id', flat=True)
         included_category_ids = instance.included_categories.values_list('id', flat=True)
 
